@@ -1,0 +1,30 @@
+{
+  "name": "inferno-token",
+  "version": "1.0.0",
+  "description": "Deflationary token on Solana with automatic buyback and milestone-based burns",
+  "main": "index.js",
+  "scripts": {
+    "start-api": "node src/backend/api/server.js",
+    "dev-api": "nodemon src/backend/api/server.js",
+    "buyback": "node src/scripts/buyback/index.js",
+    "milestone": "node src/scripts/milestone/index.js",
+    "test-run": "node src/scripts/test.js",
+    "init": "node initialize.js",
+    "start-all": "concurrently \"npm run buyback\" \"npm run milestone\" \"npm run start-api\"",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@solana/spl-token": "^0.3.8",
+    "@solana/web3.js": "^1.78.0",
+    "axios": "^1.5.0",
+    "concurrently": "^8.2.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-cron": "^3.0.2",
+    "winston": "^3.10.0"
+  },
+  "devDependencies": {
+    "jest": "^29.6.4",
+    "nodemon": "^3.0.1"
+  }
+}

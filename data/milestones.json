@@ -1,0 +1,135 @@
+[
+  {
+    "id": "milestone-100k",
+    "marketCap": 100000,
+    "burnAmount": 50000000,
+    "percentOfSupply": 5.00,
+    "completed": false
+  },
+  {
+    "id": "milestone-200k",
+    "marketCap": 200000,
+    "burnAmount": 25000000,
+    "percentOfSupply": 2.50,
+    "completed": false
+  },
+  {
+    "id": "milestone-300k",
+    "marketCap": 300000,
+    "burnAmount": 20000000,
+    "percentOfSupply": 2.00,
+    "completed": false
+  },
+  {
+    "id": "milestone-500k",
+    "marketCap": 500000,
+    "burnAmount": 20000000,
+    "percentOfSupply": 2.00,
+    "completed": false
+  },
+  {
+    "id": "milestone-750k",
+    "marketCap": 750000,
+    "burnAmount": 15000000,
+    "percentOfSupply": 1.50,
+    "completed": false
+  },
+  {
+    "id": "milestone-1m",
+    "marketCap": 1000000,
+    "burnAmount": 15000000,
+    "percentOfSupply": 1.50,
+    "completed": false
+  },
+  {
+    "id": "milestone-1.5m",
+    "marketCap": 1500000,
+    "burnAmount": 12500000,
+    "percentOfSupply": 1.25,
+    "completed": false
+  },
+  {
+    "id": "milestone-2.5m",
+    "marketCap": 2500000,
+    "burnAmount": 12500000,
+    "percentOfSupply": 1.25,
+    "completed": false
+  },
+  {
+    "id": "milestone-3.5m",
+    "marketCap": 3500000,
+    "burnAmount": 10000000,
+    "percentOfSupply": 1.00,
+    "completed": false
+  },
+  {
+    "id": "milestone-5m",
+    "marketCap": 5000000,
+    "burnAmount": 10000000,
+    "percentOfSupply": 1.00,
+    "completed": false
+  },
+  {
+    "id": "milestone-7.5m",
+    "marketCap": 7500000,
+    "burnAmount": 10000000,
+    "percentOfSupply": 1.00,
+    "completed": false
+  },
+  {
+    "id": "milestone-10m",
+    "marketCap": 10000000,
+    "burnAmount": 10000000,
+    "percentOfSupply": 1.00,
+    "completed": false
+  },
+  {
+    "id": "milestone-15m",
+    "marketCap": 15000000,
+    "burnAmount": 7500000,
+    "percentOfSupply": 0.75,
+    "completed": false
+  },
+  {
+    "id": "milestone-25m",
+    "marketCap": 25000000,
+    "burnAmount": 7500000,
+    "percentOfSupply": 0.75,
+    "completed": false
+  },
+  {
+    "id": "milestone-35m",
+    "marketCap": 35000000,
+    "burnAmount": 5000000,
+    "percentOfSupply": 0.50,
+    "completed": false
+  },
+  {
+    "id": "milestone-50m",
+    "marketCap": 50000000,
+    "burnAmount": 5000000,
+    "percentOfSupply": 0.50,
+    "completed": false
+  },
+  {
+    "id": "milestone-75m",
+    "marketCap": 75000000,
+    "burnAmount": 7500000,
+    "percentOfSupply": 0.75,
+    "completed": false
+  },
+  {
+    "id": "milestone-90m",
+    "marketCap": 90000000,
+    "burnAmount": 7500000,
+    "percentOfSupply": 0.75,
+    "completed": false
+  },
+  {
+    "id": "milestone-100m",
+    "marketCap": 100000000,
+    "burnAmount": 50000000,
+    "percentOfSupply": 5.00,
+    "completed": false
+  }
+]
