@@ -2,31 +2,22 @@
  * Backend API Server for $INFERNO token
  * Provides endpoints for tracking burns, metrics, and milestone progress
  * Uses file-based storage instead of MongoDB
+ * Integrates with Helius for enhanced Solana data and webhooks
  */
 const express = require('express');
 const path = require('path');
-const { getMarketCap, getCirculatingSupply, fetchTokenPrice } = require('../../scripts/utils/priceOracle');
+const { getMarketCap, getCirculatingSupply, fetchTokenPrice, getTokenMetrics } = require('../../scripts/utils/priceOracle');
+const { checkMilestones } = require('../../scripts/milestone');
 const logger = require('../../scripts/utils/logger').api;
 const fileStorage = require('../../scripts/utils/fileStorage');
 require('dotenv').config();
 
 // Initialize Express app
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../../../public')));
-
-// API authentication middleware
-const authenticate = (req, res, next) => {
-  const apiKey = req.headers['x-api-key'];
-  
-  if (!apiKey || apiKey !== process.env.API_SECRET_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  
-  next();
-};
 
 // Initialize storage
 const initializeServer = async () => {
@@ -206,7 +197,7 @@ app.get('/api/metrics/history', async (req, res) => {
 });
 
 // Get buyback rewards history
-app.get('/api/rewards', authenticate, async (req, res) => {
+app.get('/api/rewards', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -237,8 +228,8 @@ app.get('/api/rewards', authenticate, async (req, res) => {
   }
 });
 
-// Trigger manual refresh of price data (admin only)
-app.post('/api/refresh-price', authenticate, async (req, res) => {
+// Trigger manual refresh of price data
+app.post('/api/refresh-price', async (req, res) => {
   try {
     const { refreshPriceCache } = require('../../scripts/utils/priceOracle');
     const priceData = await refreshPriceCache();

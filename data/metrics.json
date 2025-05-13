@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "1747177479250-szhy722",
+    "timestamp": "2025-05-13T23:04:39.250Z",
+    "totalSupply": 1000000000,
+    "circulatingSupply": 700000000,
+    "reserveWalletBalance": 300000000,
+    "totalBurned": 0,
+    "buybackBurned": 0,
+    "milestoneBurned": 0,
+    "marketCap": 0
+  }
+]

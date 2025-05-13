@@ -98,20 +98,76 @@ const executeMilestoneBurn = async (milestone, currentMarketCap) => {
     // Get reserve wallet keypair
     const reserveKeypair = getReserveWalletKeypair();
     
-    // Execute the burn transaction
-    const burnResult = await burnTokens(
-      reserveKeypair,
-      milestone.burnAmount
-    );
+    // Execute the burn transaction with retry mechanism
+    const maxRetries = 3;
+    let retryCount = 0;
+    let burnResult;
     
-    if (!burnResult.success) {
-      logger.error(`Failed to execute milestone burn: ${burnResult.error}`);
+    while (retryCount < maxRetries) {
+      try {
+        // Execute the burn transaction with Helius-optimized parameters
+        burnResult = await burnTokens(
+          reserveKeypair,
+          milestone.burnAmount,
+          process.env.TOKEN_ADDRESS,
+          'milestone'
+        );
+        
+        if (burnResult.success) {
+          break; // Success, exit retry loop
+        } else {
+          // Check if this is a recoverable error (rate limit, etc.)
+          const isRateLimitError = burnResult.error && 
+            (burnResult.error.includes('429') || 
+             burnResult.error.includes('rate limit') ||
+             burnResult.error.includes('too many requests'));
+             
+          if (isRateLimitError && retryCount < maxRetries - 1) {
+            // Exponential backoff
+            const backoffMs = Math.pow(2, retryCount) * 1000;
+            logger.warn(`Rate limit reached, retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+            retryCount++;
+          } else {
+            // Non-recoverable error or max retries reached
+            logger.error(`Failed to execute milestone burn: ${burnResult.error}`);
+            return;
+          }
+        }
+      } catch (err) {
+        // Handle unexpected errors in the burn function
+        logger.error(`Unexpected error during burn (attempt ${retryCount + 1}/${maxRetries}):`, err);
+        
+        if (retryCount < maxRetries - 1) {
+          const backoffMs = Math.pow(2, retryCount) * 1000;
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          retryCount++;
+        } else {
+          throw err; // Re-throw if max retries reached
+        }
+      }
+    }
+    
+    if (!burnResult || !burnResult.success) {
+      logger.error('Failed to execute milestone burn after maximum retries');
       return;
     }
     
     logger.info(`Burn successful with transaction signature: ${burnResult.signature}`);
     
-    // Create burn record in storage
+    // Get detailed transaction information from Helius
+    const { getEnhancedTransactionDetails } = require('../utils/solana');
+    let txDetails;
+    
+    try {
+      txDetails = await getEnhancedTransactionDetails(burnResult.signature);
+      logger.info('Retrieved enhanced transaction details from Helius');
+    } catch (txError) {
+      logger.warn(`Could not retrieve enhanced transaction details: ${txError.message}`);
+      // Continue even if we can't get enhanced details
+    }
+    
+    // Create burn record in storage with enhanced data if available
     const burnRecord = {
       burnType: 'milestone',
       amount: milestone.burnAmount,
@@ -122,7 +178,10 @@ const executeMilestoneBurn = async (milestone, currentMarketCap) => {
       timestamp: new Date().toISOString(),
       details: {
         milestoneName: `$${milestone.marketCap.toLocaleString()} Market Cap`,
-        percentOfSupply: milestone.percentOfSupply
+        percentOfSupply: milestone.percentOfSupply,
+        blockTime: txDetails?.blockTime ? new Date(txDetails.blockTime * 1000).toISOString() : null,
+        fee: txDetails?.meta?.fee || null,
+        slot: txDetails?.slot || null
       }
     };
     
@@ -150,8 +209,8 @@ const executeMilestoneBurn = async (milestone, currentMarketCap) => {
     
     logger.info(`Milestone burn for $${milestone.marketCap.toLocaleString()} completed successfully`);
     
-    // Send notification (optional)
-    sendBurnNotification(milestone, burnResult.signature);
+    // Log burn details
+    logBurnDetails(milestone, burnResult.signature);
   } catch (error) {
     logger.error(`Error executing milestone burn: ${error}`);
   }
@@ -210,33 +269,17 @@ const updateMetrics = async (burnAmount) => {
 };
 
 /**
- * Send notification about a milestone burn
+ * Log milestone burn information
  * @param {Object} milestone - Milestone object
  * @param {String} txSignature - Transaction signature
  */
-const sendBurnNotification = (milestone, txSignature) => {
+const logBurnDetails = (milestone, txSignature) => {
   try {
-    // Check if notification channels are configured
-    if (!process.env.DISCORD_WEBHOOK_URL && !process.env.TELEGRAM_BOT_TOKEN) {
-      logger.info('No notification channels configured, skipping notification');
-      return;
-    }
-    
     const message = `🔥 $INFERNO MILESTONE BURN EXECUTED 🔥\n\nMilestone: $${milestone.marketCap.toLocaleString()} Market Cap\nBurned: ${milestone.burnAmount.toLocaleString()} tokens (${milestone.percentOfSupply}% of supply)\nTransaction: https://solscan.io/tx/${txSignature}`;
     
-    // Send Discord notification if configured
-    if (process.env.DISCORD_WEBHOOK_URL) {
-      // TODO: Implement Discord webhook notification
-      logger.info('Discord notification would be sent here');
-    }
-    
-    // Send Telegram notification if configured
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-      // TODO: Implement Telegram notification
-      logger.info('Telegram notification would be sent here');
-    }
+    logger.info(message);
   } catch (error) {
-    logger.error(`Error sending notification: ${error}`);
+    logger.error(`Error logging burn details: ${error}`);
   }
 };
 

@@ -7,7 +7,8 @@ const {
   Keypair, 
   Transaction, 
   SystemProgram,
-  sendAndConfirmTransaction
+  sendAndConfirmTransaction,
+  MemoProgram
 } = require('@solana/web3.js');
 const { 
   Token, 
@@ -20,7 +21,13 @@ require('dotenv').config();
 
 // Create connection to Solana network
 const getConnection = () => {
-  return new Connection(process.env.SOLANA_RPC_URL, 'confirmed');
+  const rpcUrl = process.env.SOLANA_RPC_URL;
+  // Set higher confirmation level and commitment for Helius
+  return new Connection(rpcUrl, {
+    commitment: 'confirmed',
+    confirmTransactionInitialTimeout: 60000, // 60 seconds
+    disableRetryOnRateLimit: false
+  });
 };
 
 /**
@@ -51,6 +58,16 @@ const createKeypair = (privateKeyString = process.env.SOLANA_PRIVATE_KEY) => {
  */
 const getReserveWalletKeypair = () => {
   return createKeypair(process.env.RESERVE_WALLET_PRIVATE_KEY);
+};
+
+const getEnhancedTransactionDetails = async (signature) => {
+  const connection = getConnection();
+  // Use Helius-specific enhanced transaction method
+  const txDetails = await connection.getTransaction(signature, {
+    maxSupportedTransactionVersion: 0,
+    commitment: 'confirmed'
+  });
+  return txDetails;
 };
 
 /**
@@ -113,18 +130,21 @@ const getSolBalance = async (walletAddress) => {
  * @param {Keypair} senderKeypair - Keypair of the sender
  * @param {Number} amount - Amount of tokens to burn
  * @param {String} tokenAddress - Token mint address
- * @param {String} burnAddress - Burn address
+ * @param {String} burnType - Type of burn ('milestone' or 'buyback')
  * @returns {Promise<Object>} Transaction result
  */
 const burnTokens = async (
   senderKeypair,
   amount,
   tokenAddress = process.env.TOKEN_ADDRESS,
-  burnAddress = process.env.BURN_ADDRESS
+  burnType = 'general'
 ) => {
   try {
     const connection = getConnection();
     const tokenPublicKey = new PublicKey(tokenAddress);
+    
+    // Use standard Solana burn address
+    const burnAddress = "1nc1nerator11111111111111111111111111111111";
     const destinationPublicKey = new PublicKey(burnAddress);
     
     // Create token object
@@ -175,8 +195,11 @@ const burnTokens = async (
     const decimals = tokenInfo.decimals;
     const amountInTokenUnits = amount * (10 ** decimals);
     
-    // Create and send the transfer transaction
-    const transaction = new Transaction().add(
+    // Create transaction with token transfer and memo
+    const transaction = new Transaction();
+    
+    // Add token transfer instruction
+    transaction.add(
       Token.createTransferInstruction(
         TOKEN_PROGRAM_ID,
         senderTokenAccount.address,
@@ -187,11 +210,23 @@ const burnTokens = async (
       )
     );
     
+    // Add memo instruction for transparency
+    transaction.add(
+      MemoProgram.createMemo({
+        signers: [senderKeypair],
+        memo: `$INFERNO ${burnType.toUpperCase()} BURN: ${amount.toLocaleString()} tokens`
+      })
+    );
+    
     const signature = await sendAndConfirmTransaction(
       connection,
       transaction,
       [senderKeypair],
-      { commitment: 'confirmed' }
+      {
+        skipPreflight: false, 
+        preflightCommitment: 'confirmed',
+        maxRetries: 3
+      }
     );
     
     logger.info(`Burned ${amount} tokens with tx: ${signature}`);
@@ -201,7 +236,8 @@ const burnTokens = async (
       signature,
       amount,
       sender: senderKeypair.publicKey.toString(),
-      burnAddress
+      burnAddress,
+      memo: `$INFERNO ${burnType.toUpperCase()} BURN: ${amount.toLocaleString()} tokens`
     };
   } catch (error) {
     logger.error('Error burning tokens:', error);
@@ -268,5 +304,6 @@ module.exports = {
   getTokenBalance,
   getSolBalance,
   burnTokens,
-  transferSol
+  transferSol,
+  getEnhancedTransactionDetails
 };

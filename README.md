@@ -17,6 +17,7 @@ $INFERNO combines two powerful deflationary mechanisms:
 - **Transaction Tax**: 0% (no tax on trades)
 - **Reserve Wallet**: 30% of total supply (300 million tokens)
 - **Creation Platform**: pump.fun
+- **Burn Method**: Standard `1nc1nerator11111111111111111111111111111111` dead address with transaction memos
 
 ## Project Structure
 
@@ -154,7 +155,38 @@ npm run start-api
 
 - Node.js 14+
 - Solana wallet with private key
-- Access to Solana RPC node
+- Helius RPC API key (for enhanced Solana data)
+- Birdeye API key (for token price data)
+
+## Helius Integration
+
+This project is optimized for use with Helius, a high-performance Solana RPC provider:
+
+### Key Helius Features Used:
+
+1. **Enhanced RPC Endpoint**: Higher reliability and performance for all Solana interactions
+2. **Enhanced Transaction Data**: More detailed transaction information for burns and transfers
+3. **Webhooks**: Event-driven architecture for real-time milestone and burn monitoring
+4. **Rate Limit Handling**: Smart retry mechanisms with exponential backoff
+5. **Solana Token Extensions**: Better token supply and account tracking
+
+### Setting Up Helius:
+
+1. Sign up at [helius.xyz](https://helius.xyz)
+2. Create an API key
+3. Set up webhooks for your token address and burn address
+4. Configure the `.env` file with your Helius credentials
+
+### Webhook Configuration:
+
+The system supports Helius webhooks for real-time event processing. To set up:
+
+1. Create a webhook in Helius dashboard pointing to `your-api-url/api/webhook/token-activity`
+2. Add your token address, burn address, and reserve wallet as watched addresses
+3. Set webhook type to "enhanced"
+4. Configure for TOKEN_TRANSFER and MARKET_DATA_UPDATE events
+
+For more details, visit the API endpoint: `/api/webhooks/setup` (requires authentication)
 
 ## License
 

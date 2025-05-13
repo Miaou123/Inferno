@@ -1,8 +1,10 @@
 /**
  * Price Oracle utility for $INFERNO token
  * Responsible for fetching token price and calculating market cap
+ * Uses Birdeye for price data and Helius for on-chain data
  */
 const axios = require('axios');
+const { PublicKey } = require('@solana/web3.js');
 const { getConnection, getTokenBalance } = require('./solana');
 const logger = require('./logger').price;
 require('dotenv').config();
@@ -19,7 +21,7 @@ let priceCache = {
 };
 
 /**
- * Get token price from pump.fun or other APIs
+ * Get token price from Birdeye API
  * @returns {Promise<Object>} Price data
  */
 const fetchTokenPrice = async () => {
@@ -33,23 +35,46 @@ const fetchTokenPrice = async () => {
       };
     }
     
-    // TODO: Replace with actual API call to PumpSwap or other price oracle
-    // This is a simplified implementation
-    // In production, you should use a reliable price oracle service
+    // Fetch token price from Birdeye
+    const response = await axios.get(process.env.BIRDEYE_API_URL, {
+      params: {
+        address: process.env.TOKEN_ADDRESS,
+        include_liquidity: true
+      },
+      headers: {
+        'x-chain': 'solana',
+        'X-API-KEY': process.env.BIRDEYE_API_KEY
+      }
+    });
     
-    // For PumpSwap, you might use their API or extract from their UI
-    // const response = await axios.get(
-    //   `https://api.pump.fun/token/${process.env.TOKEN_ADDRESS}/price`
-    // );
+    if (!response.data || response.data.success === false) {
+      throw new Error('Failed to fetch price data from Birdeye');
+    }
     
-    // For now, simulate with mock data
-    // In production, replace with actual price fetching logic
-    const mockSolPrice = 100; // USD per SOL
-    const mockTokenPrice = 0.00001; // SOL per token
+    // Extract price data
+    const priceData = response.data.data;
     
-    const tokenPriceInSol = mockTokenPrice;
-    const solPriceInUsd = mockSolPrice;
-    const tokenPriceInUsd = tokenPriceInSol * solPriceInUsd;
+    // Get SOL price in USD (also from Birdeye)
+    const solResponse = await axios.get(process.env.BIRDEYE_API_URL, {
+      params: {
+        address: 'So11111111111111111111111111111111111111112', // SOL token address
+        include_liquidity: false
+      },
+      headers: {
+        'x-chain': 'solana',
+        'X-API-KEY': process.env.BIRDEYE_API_KEY
+      }
+    });
+    
+    if (!solResponse.data || solResponse.data.success === false) {
+      throw new Error('Failed to fetch SOL price data from Birdeye');
+    }
+    
+    const solPriceInUsd = solResponse.data.data.value;
+    
+    // Calculate token price in SOL
+    const tokenPriceInUsd = priceData.value;
+    const tokenPriceInSol = tokenPriceInUsd / solPriceInUsd;
     
     // Update cache
     priceCache.tokenPriceInSol = tokenPriceInSol;
@@ -57,10 +82,14 @@ const fetchTokenPrice = async () => {
     priceCache.solPriceInUsd = solPriceInUsd;
     priceCache.lastUpdated = Date.now();
     
+    logger.info(`Updated token price: $${tokenPriceInUsd.toFixed(6)}, ${tokenPriceInSol.toFixed(8)} SOL`);
+    
     return {
       tokenPriceInSol,
       tokenPriceInUsd,
-      solPriceInUsd
+      solPriceInUsd,
+      liquidity: priceData.liquidity || null,
+      volume24h: priceData.volume24h || null
     };
   } catch (error) {
     logger.error('Error fetching token price:', error);
@@ -81,6 +110,63 @@ const fetchTokenPrice = async () => {
 };
 
 /**
+ * Fetch token supply info using Helius API
+ * @returns {Promise<Object>} Supply data
+ */
+const fetchTokenSupply = async () => {
+  try {
+    // Use getTokenSupply method via Helius connection
+    const connection = getConnection(); // Assumes this uses the Helius endpoint
+    const tokenMintAddress = new PublicKey(process.env.TOKEN_ADDRESS);
+    
+    // Get total supply from the mint
+    const supplyInfo = await connection.getTokenSupply(tokenMintAddress);
+    const totalSupply = supplyInfo.value.uiAmount;
+    
+    // Get tokens in burn address
+    const burnAddressBalance = await getTokenBalance(process.env.BURN_ADDRESS);
+    
+    // Get tokens in reserve wallet
+    const reserveWalletBalance = await getTokenBalance(process.env.RESERVE_WALLET_ADDRESS);
+    
+    // Calculate circulating supply
+    const circulatingSupply = totalSupply - burnAddressBalance - reserveWalletBalance;
+    
+    logger.info(`Token supply info: Total=${totalSupply}, Circulating=${circulatingSupply}, Burned=${burnAddressBalance}, Reserve=${reserveWalletBalance}`);
+    
+    return {
+      totalSupply,
+      circulatingSupply,
+      burnAddressBalance,
+      reserveWalletBalance
+    };
+  } catch (error) {
+    logger.error('Error fetching token supply from Helius:', error);
+    
+    // If we can't get on-chain data, fall back to the configured initial supply
+    if (priceCache.circulatingSupply !== null) {
+      logger.info('Using cached supply data due to fetch error');
+      return {
+        circulatingSupply: priceCache.circulatingSupply,
+        isExpiredCache: true
+      };
+    }
+    
+    // Last resort fallback to initial supply configuration
+    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+    const reserveWalletPercentage = 0.3; // 30%
+    
+    return {
+      totalSupply: initialSupply,
+      circulatingSupply: initialSupply * (1 - reserveWalletPercentage),
+      reserveWalletBalance: initialSupply * reserveWalletPercentage,
+      burnAddressBalance: 0,
+      isEstimated: true
+    };
+  }
+};
+
+/**
  * Calculate the current circulating supply
  * @returns {Promise<Number>} Circulating supply
  */
@@ -92,17 +178,9 @@ const getCirculatingSupply = async () => {
       return priceCache.circulatingSupply;
     }
     
-    const initialSupply = Number(process.env.INITIAL_SUPPLY);
-    const burnAddress = process.env.BURN_ADDRESS;
-    
-    // Get tokens in burn address (these are effectively removed from circulation)
-    const burnedTokens = await getTokenBalance(burnAddress);
-    
-    // Get tokens in reserve wallet (these are not in circulation yet)
-    const reserveWalletAddress = process.env.RESERVE_WALLET_ADDRESS;
-    const reserveTokens = await getTokenBalance(reserveWalletAddress);
-    
-    const circulatingSupply = initialSupply - burnedTokens - reserveTokens;
+    // Fetch supply data from Helius
+    const supplyData = await fetchTokenSupply();
+    const circulatingSupply = supplyData.circulatingSupply;
     
     // Update cache
     priceCache.circulatingSupply = circulatingSupply;
@@ -159,6 +237,42 @@ const getMarketCap = async () => {
 };
 
 /**
+ * Get comprehensive token metrics
+ * @returns {Promise<Object>} Complete token metrics
+ */
+const getTokenMetrics = async () => {
+  try {
+    // Force refresh all data
+    const [priceData, supplyData, marketCap] = await Promise.all([
+      fetchTokenPrice(),
+      fetchTokenSupply(),
+      getMarketCap()
+    ]);
+    
+    return {
+      price: {
+        usd: priceData.tokenPriceInUsd,
+        sol: priceData.tokenPriceInSol,
+        solPrice: priceData.solPriceInUsd,
+        liquidity: priceData.liquidity,
+        volume24h: priceData.volume24h
+      },
+      supply: {
+        total: supplyData.totalSupply,
+        circulating: supplyData.circulatingSupply,
+        reserve: supplyData.reserveWalletBalance,
+        burned: supplyData.burnAddressBalance
+      },
+      marketCap,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error('Error fetching token metrics:', error);
+    throw error;
+  }
+};
+
+/**
  * Force refresh the price cache
  */
 const refreshPriceCache = async () => {
@@ -168,24 +282,22 @@ const refreshPriceCache = async () => {
     // Reset cache expiry
     priceCache.lastUpdated = null;
     
-    // Fetch fresh data
-    const { tokenPriceInSol, tokenPriceInUsd, solPriceInUsd } = await fetchTokenPrice();
-    const circulatingSupply = await getCirculatingSupply();
-    const marketCap = tokenPriceInUsd * circulatingSupply;
+    // Get full metrics (forces refresh of all data)
+    const metrics = await getTokenMetrics();
     
-    // Update cache
+    // Update cache with all fresh data
     priceCache = {
-      tokenPriceInSol,
-      tokenPriceInUsd,
-      solPriceInUsd,
-      marketCap,
-      circulatingSupply,
+      tokenPriceInSol: metrics.price.sol,
+      tokenPriceInUsd: metrics.price.usd,
+      solPriceInUsd: metrics.price.solPrice,
+      marketCap: metrics.marketCap,
+      circulatingSupply: metrics.supply.circulating,
       lastUpdated: Date.now(),
       ttl: priceCache.ttl
     };
     
     logger.info('Price cache refreshed successfully');
-    return priceCache;
+    return metrics;
   } catch (error) {
     logger.error('Error refreshing price cache:', error);
     throw error;
@@ -194,7 +306,9 @@ const refreshPriceCache = async () => {
 
 module.exports = {
   fetchTokenPrice,
+  fetchTokenSupply,
   getCirculatingSupply,
   getMarketCap,
+  getTokenMetrics,
   refreshPriceCache
 };
