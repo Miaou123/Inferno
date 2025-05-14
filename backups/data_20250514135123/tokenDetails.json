@@ -1,2 +1,74 @@
 [
+  {
+    "id": "1747222944073-yemgezw",
+    "timestamp": "2025-05-14T11:42:24.073Z",
+    "name": "$INFERNO",
+    "symbol": "INFERNO",
+    "address": "2wmywxBbbNW8N1jTLTFZWDn9xmEACNLai9LcCs3Nuw5K",
+    "metadataUri": "https://arweave.net/mock-metadata-uri-for-testing",
+    "creationTxSignature": "MockSignature1747222944073",
+    "initialBuyAmount": 0.1,
+    "createdAt": "2025-05-14T11:42:24.073Z",
+    "mockMode": true
+  },
+  {
+    "id": "1747223044712-tuku721",
+    "timestamp": "2025-05-14T11:44:04.712Z",
+    "name": "$INFERNO",
+    "symbol": "INFERNO",
+    "address": "E5reiSjHV9uVqru5fkfiMi1w2SCLpiSg9T3MNnuEifHN",
+    "metadataUri": "https://arweave.net/mock-metadata-uri-for-testing",
+    "creationTxSignature": "MockSignature1747223044711",
+    "initialBuyAmount": 0.1,
+    "createdAt": "2025-05-14T11:44:04.711Z",
+    "mockMode": true
+  },
+  {
+    "id": "1747223103103-8bhkjtb",
+    "timestamp": "2025-05-14T11:45:03.103Z",
+    "name": "$INFERNO",
+    "symbol": "INFERNO",
+    "address": "35bZyKEFgnwonJQT8GoPGJPdHtKD8HJyPxSdjZ1N8RsW",
+    "metadataUri": "https://arweave.net/mock-metadata-uri-for-testing",
+    "creationTxSignature": "MockSignature1747223103103",
+    "initialBuyAmount": 0.1,
+    "createdAt": "2025-05-14T11:45:03.103Z",
+    "mockMode": true
+  },
+  {
+    "id": "1747223135722-wsx4p58",
+    "timestamp": "2025-05-14T11:45:35.722Z",
+    "name": "$INFERNO",
+    "symbol": "INFERNO",
+    "address": "A21983vnU1eoPoPaxdivvqXTzsaN2STBzfQQ4wSTHN1w",
+    "metadataUri": "https://arweave.net/mock-metadata-uri-for-testing",
+    "creationTxSignature": "MockSignature1747223135722",
+    "initialBuyAmount": 0.1,
+    "createdAt": "2025-05-14T11:45:35.722Z",
+    "mockMode": true
+  },
+  {
+    "id": "1747223158423-si1zflg",
+    "timestamp": "2025-05-14T11:45:58.423Z",
+    "name": "$INFERNO",
+    "symbol": "INFERNO",
+    "address": "7ZatPVBCGHhLU5NFXSrEQiQgu1AzrQJbb8RLB2k9Yb2X",
+    "metadataUri": "https://arweave.net/mock-metadata-uri-for-testing",
+    "creationTxSignature": "MockSignature1747223158423",
+    "initialBuyAmount": 0.1,
+    "createdAt": "2025-05-14T11:45:58.423Z",
+    "mockMode": true
+  },
+  {
+    "id": "1747223381476-4tblfmi",
+    "timestamp": "2025-05-14T11:49:41.476Z",
+    "name": "$INFERNO",
+    "symbol": "INFERNO",
+    "address": "9c7Ke3YLFrHiRPUn84ieZYZrd5Lp3dj14jL7Gy3hoet2",
+    "metadataUri": "https://arweave.net/mock-metadata-uri-for-testing",
+    "creationTxSignature": "MockSignature1747223381476",
+    "initialBuyAmount": 0.1,
+    "createdAt": "2025-05-14T11:49:41.476Z",
+    "mockMode": true
+  }
 ]

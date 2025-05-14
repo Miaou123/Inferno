@@ -2,12 +2,12 @@
     {
       "id": "1747181229250-burn1",
       "timestamp": "2025-05-14T01:00:29.250Z",
-      "burnAmount": 1403218,
+      "burnAmount": 143218,
       "burnAmountUsd": 494.10,
       "burnType": "automated",
       "solSpent": 1.24,
       "solSpentUsd": 494.10,
-      "transactionHash": "Hjk2dLeqSHYfdBCJGYnD1XfMYTQAZPozFwCpjf89a"
+      "transactionHash": "nigger"
     },
     {
       "id": "1747180029250-burn2",
@@ -70,7 +70,7 @@
     {
       "id": "1747180729250-milestone3",
       "timestamp": "2025-05-14T00:52:09.250Z",
-      "burnAmount": 100000000,
+      "burnAmount": 20000000,
       "burnAmountUsd": 65000.00,
       "burnType": "milestone",
       "milestoneId": "milestone-300k",

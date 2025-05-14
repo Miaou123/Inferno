@@ -227,6 +227,179 @@
                 opacity: 0.8;
             }
         }
+
+        .market-cap-showcase {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 30px 0 50px;
+    position: relative;
+}
+
+.market-cap-display {
+    background: rgba(20, 20, 20, 0.8);
+    border: 2px solid #333;
+    border-radius: 15px;
+    padding: 30px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+.market-cap-display::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
+    z-index: 2;
+}
+
+.market-cap-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+}
+
+.market-cap-value {
+    font-family: 'Iceland', monospace;
+    font-size: 64px;
+    font-weight: 700;
+    background: linear-gradient(to right, #ff4500, #ff8c00, #ffcc00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+    z-index: 2;
+    text-shadow: 
+        0 0 10px rgba(255, 69, 0, 0.7),
+        0 0 20px rgba(255, 69, 0, 0.5),
+        0 0 30px rgba(255, 69, 0, 0.3);
+    animation: pulse-text 3s infinite alternate;
+}
+
+@keyframes pulse-text {
+    0% {
+        text-shadow: 
+            0 0 10px rgba(255, 69, 0, 0.7),
+            0 0 20px rgba(255, 69, 0, 0.5),
+            0 0 30px rgba(255, 69, 0, 0.3);
+    }
+    100% {
+        text-shadow: 
+            0 0 15px rgba(255, 69, 0, 0.9),
+            0 0 25px rgba(255, 69, 0, 0.7),
+            0 0 35px rgba(255, 69, 0, 0.5);
+    }
+}
+
+/* Fire container and particles */
+.fire-container {
+    position: absolute;
+    bottom: -20px;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    z-index: 1;
+}
+
+.fire-base {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    background: linear-gradient(to top, 
+        rgba(255, 69, 0, 0.6), 
+        rgba(255, 69, 0, 0.3), 
+        transparent);
+    filter: blur(5px);
+}
+
+.fire-particle {
+    position: absolute;
+    bottom: 0;
+    width: 20px;
+    height: 60px;
+    background: radial-gradient(
+        ellipse at center, 
+        rgba(255, 204, 0, 0.8) 0%, 
+        rgba(255, 140, 0, 0.6) 50%, 
+        rgba(255, 69, 0, 0.4) 100%
+    );
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    filter: blur(2px);
+    opacity: 0.9;
+    animation: flame-rise 3s infinite;
+}
+
+.fire-particle-1 {
+    left: 20%;
+    animation-delay: -0.5s;
+}
+
+.fire-particle-2 {
+    left: 35%;
+    animation-delay: -1.5s;
+    height: 50px;
+}
+
+.fire-particle-3 {
+    left: 50%;
+    animation-delay: -0.7s;
+    height: 65px;
+}
+
+.fire-particle-4 {
+    left: 65%;
+    animation-delay: -2s;
+    height: 45px;
+}
+
+.fire-particle-5 {
+    left: 80%;
+    animation-delay: -1.2s;
+    height: 55px;
+}
+
+@keyframes flame-rise {
+    0% {
+        transform: translateY(0) scaleX(1) scaleY(1);
+        opacity: 0.9;
+    }
+    50% {
+        transform: translateY(-30px) scaleX(0.9) scaleY(1.2);
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(-60px) scaleX(0.7) scaleY(0.8);
+        opacity: 0;
+    }
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .market-cap-value {
+        font-size: 48px;
+    }
+}
+
+@media (max-width: 576px) {
+    .market-cap-display {
+        padding: 20px 30px;
+    }
+    
+    .market-cap-value {
+        font-size: 36px;
+    }
+}
         
         .token-name {
             font-size: 72px;
@@ -568,7 +741,6 @@
         .protocol-metrics-container {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 30px;
         }
         
         .metrics-panel {
@@ -1712,168 +1884,25 @@
                 <div class="metrics-panel milestone-burns active">
                     <div class="metric-row">
                         <div class="metric-label">Milestone Burn Progress</div>
-                        <div class="current-market-cap" id="current-marketcap">
-                            Current Market Cap: <strong>Loading...</strong>
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            <span>LIVE</span>
                         </div>
                     </div>
                     
-                    <div class="burn-ladder">
-                        <!-- Milestone labels (top) -->
-                        <div class="milestone-labels">
-                            <div class="milestone-label completed" style="left: 0%">$100K</div>
-                            <div class="milestone-label completed" style="left: 22%">$500K</div>
-                            <div class="milestone-label" style="left: 35%">$1.5M</div>
-                            <div class="milestone-label" style="left: 50%">$5M</div>
-                            <div class="milestone-label" style="left: 65%">$15M</div>
-                            <div class="milestone-label" style="left: 82%">$50M</div>
-                            <div class="milestone-label" style="left: 100%">$100M</div>
-                        </div>
-                        
-                        <!-- Main ladder track -->
-                        <div class="ladder-track">
-                            <!-- Background divisions -->
-                            <div class="track-division" style="left: 22%"></div>
-                            <div class="track-division" style="left: 35%"></div>
-                            <div class="track-division" style="left: 50%"></div>
-                            <div class="track-division" style="left: 65%"></div>
-                            <div class="track-division" style="left: 82%"></div>
-                            <div class="track-division" style="left: 100%"></div>
-                            
-                            <!-- Progress bar -->
-                            <div class="progress-track" style="width: 18%">
-                                <div class="progress-glow"></div>
+                    <!-- Prominent Market Cap Display with Fire Effects -->
+                    <div class="market-cap-showcase">
+                        <div class="market-cap-display">
+                            <div class="market-cap-title">CURRENT MARKET CAP</div>
+                            <div class="market-cap-value" id="current-marketcap-value">$750,000</div>
+                            <div class="fire-container">
+                                <div class="fire-base"></div>
+                                <div class="fire-particle fire-particle-1"></div>
+                                <div class="fire-particle fire-particle-2"></div>
+                                <div class="fire-particle fire-particle-3"></div>
+                                <div class="fire-particle fire-particle-4"></div>
+                                <div class="fire-particle fire-particle-5"></div>
                             </div>
-
-                            <!-- Key milestone markers -->
-                            <div class="milestone-marker completed key" style="left: 0%">
-                                <div class="animated-flame">
-                                    <div class="flame-particle"></div>
-                                    <div class="flame-particle"></div>
-                                    <div class="flame-particle"></div>
-                                </div>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$100K</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 50,000,000 tokens</span>
-                                        <span>(5.00% of supply)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="milestone-marker key next" style="left: 22%">
-                                <span class="next-icon">⚡</span>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$500K</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 20,000,000 tokens</span>
-                                        <span>(2.00% of supply)</span>
-                                    </div>
-                                    <div class="milestone-progress">
-                                        <div class="milestone-progress-bar">
-                                            <div class="milestone-progress-fill" style="width: 70%"></div>
-                                        </div>
-                                        <div class="milestone-progress-text">70%</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Intermediate milestones (just a few examples) -->
-                            <div class="milestone-marker completed" style="left: 8%">
-                                <div class="animated-flame">
-                                    <div class="flame-particle"></div>
-                                    <div class="flame-particle"></div>
-                                    <div class="flame-particle"></div>
-                                </div>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$200K</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 25,000,000 tokens</span>
-                                        <span>(2.50% of supply)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="milestone-marker completed" style="left: 14%">
-                                <div class="animated-flame">
-                                    <div class="flame-particle"></div>
-                                    <div class="flame-particle"></div>
-                                    <div class="flame-particle"></div>
-                                </div>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$300K</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 20,000,000 tokens</span>
-                                        <span>(2.00% of supply)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Add the remaining key milestone markers -->
-                            <div class="milestone-marker key" style="left: 35%">
-                                <span class="dot"></span>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$1.5M</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 12,500,000 tokens</span>
-                                        <span>(1.25% of supply)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="milestone-marker key" style="left: 50%">
-                                <span class="dot"></span>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$5M</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 10,000,000 tokens</span>
-                                        <span>(1.00% of supply)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="milestone-marker key" style="left: 65%">
-                                <span class="dot"></span>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$15M</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 7,500,000 tokens</span>
-                                        <span>(0.75% of supply)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="milestone-marker key" style="left: 82%">
-                                <span class="dot"></span>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$50M</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 5,000,000 tokens</span>
-                                        <span>(0.50% of supply)</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="milestone-marker key" style="left: 100%">
-                                <span class="dot"></span>
-                                <div class="milestone-tooltip">
-                                    <div class="tooltip-title">$100M</div>
-                                    <div class="tooltip-detail">
-                                        <span>Burn: 50,000,000 tokens</span>
-                                        <span>(5.00% of supply)</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Burn percentages (bottom) -->
-                        <div class="burn-percentages">
-                            <div class="percentage-label completed" style="left: 0%">5.00%</div>
-                            <div class="percentage-label next" style="left: 22%">2.00%</div>
-                            <div class="percentage-label" style="left: 35%">1.25%</div>
-                            <div class="percentage-label" style="left: 50%">1.00%</div>
-                            <div class="percentage-label" style="left: 65%">0.75%</div>
-                            <div class="percentage-label" style="left: 82%">0.50%</div>
-                            <div class="percentage-label" style="left: 100%">5.00%</div>
                         </div>
                     </div>
                     
@@ -1973,23 +2002,6 @@
                                     <td>1.46 SOL</td>
                                     <td class="burn-amount">168,711 INFERNO</td>
                                 </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="burn-history">
-                        <h3>Burn Rewards</h3>
-                        <table class="history-table" id="rewards-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>SOL Reward</th>
-                                    <th>USD Value</th>
-                                    <th>Transaction</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Will be populated from the API -->
                             </tbody>
                         </table>
                     </div>
