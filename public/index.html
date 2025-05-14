@@ -1664,7 +1664,7 @@
             <!-- Contract Address Display -->
             <div class="contract-display">
                 <div class="contract-address">
-                    <span id="contract-address">GNxYv32buvqPS7M2GuXHxSxSN8weEkQiRuD575LXRYvu</span>
+                    <span id="contract-address">Loading...</span>
                     <span class="copy-icon" id="copy-address">📋</span>
                 </div>
             </div>
@@ -2270,7 +2270,22 @@
                 });
             }
             
-            // Fetch and update all real-time data
+            /**
+             * Format currency value with K/M/B suffix
+             */
+            function formatCurrency(value) {
+                if (value >= 1000000000) {
+                    return (value / 1000000000).toFixed(2) + 'B';
+                } else if (value >= 1000000) {
+                    return (value / 1000000).toFixed(2) + 'M';
+                } else if (value >= 1000) {
+                    return (value / 1000).toFixed(1) + 'K';
+                } else {
+                    return value.toFixed(2);
+                }
+            }
+            
+            // Fetch and update all real-time data - NO HARDCODED VALUES
             async function fetchBurnData() {
                 try {
                     // Fetch metrics data
@@ -2279,22 +2294,28 @@
                         const metricsData = await metricsResponse.json();
                         console.log("Fetched metrics data:", metricsData);
                         
-                        // Update contract address if available
+                        // Update contract address from API data
                         if (metricsData.tokenAddress) {
                             const contractAddressElement = document.getElementById('contract-address');
                             if (contractAddressElement) {
                                 contractAddressElement.textContent = metricsData.tokenAddress;
                             }
+                            
+                            // Update chart link with real token address
+                            const chartButton = document.querySelector('.hero-buttons .button:first-child');
+                            if (chartButton) {
+                                chartButton.href = `https://pump.fun/coin/${metricsData.tokenAddress}`;
+                            }
                         }
                         
-                        // Update total tokens burned
+                        // Update total tokens burned from API data
                         const totalBurnedElement = document.getElementById('total-burned');
                         if (totalBurnedElement && metricsData.totalBurned !== undefined) {
                             totalBurnedElement.textContent = metricsData.totalBurned.toLocaleString();
                         }
                         
-                        // Update burn percentage
-                        const initialSupply = 1000000000; // 1 billion
+                        // Calculate burn percentage from API data
+                        const initialSupply = 1000000000; // 1 billion total supply
                         const burnPercentage = ((metricsData.totalBurned || 0) / initialSupply * 100).toFixed(2);
                         
                         const progressBar = document.getElementById('burn-progress');
@@ -2309,27 +2330,23 @@
                         }
                     }
                     
-                    // Calculate market cap from metrics data (not from milestones)
-                    // Market cap = price × total supply (1B)
+                    // Calculate market cap from price data - NEVER HARDCODED
+                    // Market cap = current price × total supply (1B)
                     if (metricsData && metricsData.priceInUsd !== undefined) {
-                        const totalSupply = 1000000000; // 1B tokens
+                        const totalSupply = 1000000000; // 1 billion total supply
                         const marketCap = metricsData.priceInUsd * totalSupply;
                         
-                        // Update market cap display
+                        // Update market cap display with calculated value
                         const marketCapElement = document.getElementById('current-marketcap');
                         if (marketCapElement) {
-                            // Format market cap with K/M/B suffix
-                            let formattedMarketCap;
-                            if (marketCap >= 1000000000) {
-                                formattedMarketCap = (marketCap / 1000000000).toFixed(2) + 'B';
-                            } else if (marketCap >= 1000000) {
-                                formattedMarketCap = (marketCap / 1000000).toFixed(2) + 'M';
-                            } else if (marketCap >= 1000) {
-                                formattedMarketCap = (marketCap / 1000).toFixed(1) + 'K';
-                            } else {
-                                formattedMarketCap = marketCap.toFixed(2);
-                            }
-                            
+                            const formattedMarketCap = formatCurrency(marketCap);
+                            marketCapElement.innerHTML = `Current Market Cap: <strong>$${formattedMarketCap}</strong>`;
+                        }
+                    } else if (metricsData && metricsData.marketCap !== undefined) {
+                        // Alternate source if price not available
+                        const marketCapElement = document.getElementById('current-marketcap');
+                        if (marketCapElement) {
+                            const formattedMarketCap = formatCurrency(metricsData.marketCap);
                             marketCapElement.innerHTML = `Current Market Cap: <strong>$${formattedMarketCap}</strong>`;
                         }
                     }
@@ -2340,38 +2357,184 @@
                         const milestonesData = await milestonesResponse.json();
                         console.log("Fetched milestones data:", milestonesData);
                         
-                        // Update milestones completed counter
-                        const completedCount = milestonesData.progress?.completedCount || 0;
-                        const totalCount = milestonesData.progress?.totalCount || 0;
-                        
-                        const milestonesCompletedElement = document.querySelector('.stat-card:nth-child(1) .stat-value');
-                        if (milestonesCompletedElement) {
-                            milestonesCompletedElement.textContent = `${completedCount} of ${totalCount}`;
-                        }
-                        
-                        // Update next milestone info
-                        const nextMilestone = milestonesData.progress?.nextMilestone;
-                        if (nextMilestone) {
-                            const nextMilestoneElement = document.querySelector('.stat-card:nth-child(4) .stat-value');
-                            const nextMilestoneSubElement = document.querySelector('.stat-card:nth-child(4) .stat-sub');
+                        // Update ALL milestone-related metrics from real data
+                        if (milestonesData.milestones) {
+                            // Update milestones completed counter
+                            const completedCount = milestonesData.milestones.filter(m => m.completed).length;
+                            const totalCount = milestonesData.milestones.length;
                             
-                            if (nextMilestoneElement) {
-                                let formattedMcap;
-                                if (nextMilestone.marketCap >= 1000000000) {
-                                    formattedMcap = (nextMilestone.marketCap / 1000000000).toFixed(2) + 'B';
-                                } else if (nextMilestone.marketCap >= 1000000) {
-                                    formattedMcap = (nextMilestone.marketCap / 1000000).toFixed(2) + 'M';
-                                } else if (nextMilestone.marketCap >= 1000) {
-                                    formattedMcap = (nextMilestone.marketCap / 1000).toFixed(1) + 'K';
-                                } else {
-                                    formattedMcap = nextMilestone.marketCap.toFixed(2);
-                                }
-                                
-                                nextMilestoneElement.textContent = `$${formattedMcap}`;
+                            const milestonesCompletedElement = document.querySelector('.stat-card:nth-child(1) .stat-value');
+                            if (milestonesCompletedElement) {
+                                milestonesCompletedElement.textContent = `${completedCount} of ${totalCount}`;
                             }
                             
-                            if (nextMilestoneSubElement) {
-                                nextMilestoneSubElement.textContent = `${nextMilestone.percentOfSupply.toFixed(2)}% Burn (${nextMilestone.burnAmount.toLocaleString()} tokens)`;
+                            // Update total milestone burn amount
+                            const milestoneBurnAmount = milestonesData.milestones
+                                .filter(m => m.completed)
+                                .reduce((sum, m) => sum + (m.burnAmount || 0), 0);
+                                
+                            const milestoneBurnElement = document.querySelector('.stat-card:nth-child(2) .stat-value');
+                            if (milestoneBurnElement) {
+                                milestoneBurnElement.textContent = milestoneBurnAmount.toLocaleString();
+                            }
+                            
+                            // Calculate percentage of supply burned via milestones
+                            const initialSupply = 1000000000; // 1 billion
+                            const milestoneBurnPercentage = (milestoneBurnAmount / initialSupply) * 100;
+                            
+                            const milestoneBurnPercentElement = document.querySelector('.stat-card:nth-child(3) .stat-value');
+                            if (milestoneBurnPercentElement) {
+                                milestoneBurnPercentElement.textContent = `${milestoneBurnPercentage.toFixed(2)}%`;
+                            }
+                            
+                            // Update next milestone
+                            const nextMilestone = milestonesData.milestones.find(m => !m.completed);
+                            if (nextMilestone) {
+                                const nextMilestoneElement = document.querySelector('.stat-card:nth-child(4) .stat-value');
+                                const nextMilestoneSubElement = document.querySelector('.stat-card:nth-child(4) .stat-sub');
+                                
+                                if (nextMilestoneElement) {
+                                    const formattedMcap = formatCurrency(nextMilestone.marketCap);
+                                    nextMilestoneElement.textContent = `$${formattedMcap}`;
+                                }
+                                
+                                if (nextMilestoneSubElement) {
+                                    nextMilestoneSubElement.textContent = `${nextMilestone.percentOfSupply.toFixed(2)}% Burn (${nextMilestone.burnAmount.toLocaleString()} tokens)`;
+                                }
+                            }
+                        } else if (milestonesData.progress) {
+                            // Fallback to old API format if present
+                            const completedCount = milestonesData.progress.completedCount || 0;
+                            const totalCount = milestonesData.progress.totalCount || 0;
+                            
+                            const milestonesCompletedElement = document.querySelector('.stat-card:nth-child(1) .stat-value');
+                            if (milestonesCompletedElement) {
+                                milestonesCompletedElement.textContent = `${completedCount} of ${totalCount}`;
+                            }
+                            
+                            // Update next milestone info from progress data
+                            const nextMilestone = milestonesData.progress.nextMilestone;
+                            if (nextMilestone) {
+                                const nextMilestoneElement = document.querySelector('.stat-card:nth-child(4) .stat-value');
+                                const nextMilestoneSubElement = document.querySelector('.stat-card:nth-child(4) .stat-sub');
+                                
+                                if (nextMilestoneElement) {
+                                    const formattedMcap = formatCurrency(nextMilestone.marketCap);
+                                    nextMilestoneElement.textContent = `$${formattedMcap}`;
+                                }
+                                
+                                if (nextMilestoneSubElement) {
+                                    nextMilestoneSubElement.textContent = `${nextMilestone.percentOfSupply.toFixed(2)}% Burn (${nextMilestone.burnAmount.toLocaleString()} tokens)`;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Fetch burns data
+                    const burnsResponse = await fetch('/api/burns');
+                    if (burnsResponse.ok) {
+                        const burnsData = await burnsResponse.json();
+                        console.log("Fetched burns data:", burnsData);
+                        
+                        if (burnsData.burns && burnsData.burns.length > 0) {
+                            // Filter for automated burns
+                            const automatedBurns = burnsData.burns.filter(b => b.burnType === 'automated' || b.burnType === 'buyback');
+                            
+                            // 24h burn calculation
+                            const oneDayAgo = new Date();
+                            oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+                            
+                            const burns24h = automatedBurns.filter(b => new Date(b.timestamp) >= oneDayAgo);
+                            const totalBurns24h = burns24h.reduce((sum, b) => sum + (b.burnAmount || 0), 0);
+                            
+                            // Total automated burns
+                            const totalAutomatedBurns = automatedBurns.reduce((sum, b) => sum + (b.burnAmount || 0), 0);
+                            
+                            // Total SOL spent
+                            const totalSolSpent = automatedBurns.reduce((sum, b) => sum + (b.solSpent || 0), 0);
+                            const solUsdPrice = 100; // Fallback SOL price estimate if not available
+                            const totalUsdSpent = automatedBurns.reduce((sum, b) => sum + (b.solSpentUsd || b.solSpent * solUsdPrice || 0), 0);
+                            
+                            // Update UI
+                            const burns24hElement = document.querySelector('.automated-burns .stat-card:nth-child(1) .stat-value');
+                            const burns24hSubElement = document.querySelector('.automated-burns .stat-card:nth-child(1) .stat-sub');
+                            const totalBurnsElement = document.querySelector('.automated-burns .stat-card:nth-child(2) .stat-value');
+                            const totalBurnsSubElement = document.querySelector('.automated-burns .stat-card:nth-child(2) .stat-sub');
+                            const solSpentElement = document.querySelector('.automated-burns .stat-card:nth-child(3) .stat-value');
+                            const solSpentSubElement = document.querySelector('.automated-burns .stat-card:nth-child(3) .stat-sub');
+                            
+                            if (burns24hElement) {
+                                burns24hElement.textContent = totalBurns24h.toLocaleString();
+                            }
+                            
+                            if (burns24hSubElement) {
+                                const supply = 1000000000; // 1 billion
+                                burns24hSubElement.textContent = `+${((totalBurns24h / supply) * 100).toFixed(2)}% of supply`;
+                            }
+                            
+                            if (totalBurnsElement) {
+                                totalBurnsElement.textContent = totalAutomatedBurns.toLocaleString();
+                            }
+                            
+                            if (totalBurnsSubElement) {
+                                const supply = 1000000000; // 1 billion
+                                totalBurnsSubElement.textContent = `${((totalAutomatedBurns / supply) * 100).toFixed(2)}% of supply`;
+                            }
+                            
+                            if (solSpentElement) {
+                                solSpentElement.textContent = `${totalSolSpent.toFixed(2)} SOL`;
+                            }
+                            
+                            if (solSpentSubElement) {
+                                solSpentSubElement.textContent = `≈ $${totalUsdSpent.toFixed(2)}`;
+                            }
+                            
+                            // Update automated burns table
+                            const automatedBurnsTable = document.querySelector('.automated-burns .history-table tbody');
+                            if (automatedBurnsTable) {
+                                // Clear existing rows
+                                automatedBurnsTable.innerHTML = '';
+                                
+                                // Sort burns by timestamp (most recent first)
+                                const recentBurns = [...automatedBurns].sort((a, b) => 
+                                    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                                ).slice(0, 5); // Get top 5
+                                
+                                // Add rows
+                                recentBurns.forEach(burn => {
+                                    const now = new Date();
+                                    const burnDate = new Date(burn.timestamp);
+                                    const minutesAgo = Math.floor((now - burnDate) / (1000 * 60));
+                                    let timeAgo;
+                                    
+                                    if (minutesAgo < 1) {
+                                        timeAgo = 'Just now';
+                                    } else if (minutesAgo < 60) {
+                                        timeAgo = `${minutesAgo} min${minutesAgo !== 1 ? 's' : ''} ago`;
+                                    } else if (minutesAgo < 1440) {
+                                        const hours = Math.floor(minutesAgo / 60);
+                                        timeAgo = `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+                                    } else {
+                                        const days = Math.floor(minutesAgo / 1440);
+                                        timeAgo = `${days} day${days !== 1 ? 's' : ''} ago`;
+                                    }
+                                    
+                                    // Get transaction hash
+                                    const txHash = burn.transactionHash || burn.txSignature || 'Unknown';
+                                    const shortTxHash = txHash.length > 10 
+                                        ? `${txHash.substring(0, 6)}...${txHash.substring(txHash.length - 4)}`
+                                        : txHash;
+                                    
+                                    const row = document.createElement('tr');
+                                    row.innerHTML = `
+                                        <td>${timeAgo}</td>
+                                        <td class="tx-hash"><a href="https://solscan.io/tx/${txHash}" target="_blank" rel="noopener noreferrer">${shortTxHash} <span class="tx-icon">↗</span></a></td>
+                                        <td>${burn.solSpent ? burn.solSpent.toFixed(2) : '0.00'} SOL</td>
+                                        <td class="burn-amount">${burn.burnAmount.toLocaleString()} INFERNO</td>
+                                    `;
+                                    
+                                    automatedBurnsTable.appendChild(row);
+                                });
                             }
                         }
                     }
