@@ -51,5 +51,8 @@ logger.buyback = logger.child({ component: 'buyback' });
 logger.milestone = logger.child({ component: 'milestone' });
 logger.api = logger.child({ component: 'api' });
 logger.price = logger.child({ component: 'price-oracle' });
+logger.rewards = logger.child({ component: 'rewards' });
+logger.tokenCreation = logger.child({ component: 'token-creation' });
+logger.setup = logger.child({ component: 'setup' });
 
 module.exports = logger;

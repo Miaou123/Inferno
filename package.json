@@ -8,19 +8,25 @@
     "dev-api": "node src/backend/api/server.js",
     "buyback": "node src/scripts/buyback/index.js",
     "milestone": "node src/scripts/milestone/index.js",
+    "rewards": "node src/scripts/rewards/index.js",
+    "setup": "node src/scripts/setup.js",
     "test-run": "node src/scripts/test.js",
+    "test-rewards": "node src/scripts/test-rewards.js",
     "init": "node initialize.js",
-    "start": "concurrently \"npm run buyback\" \"npm run milestone\" \"npm run start-api\"",
+    "start": "concurrently \"npm run buyback\" \"npm run milestone\" \"npm run rewards\" \"npm run start-api\"",
     "test": "jest"
   },
   "dependencies": {
     "@solana/spl-token": "^0.3.8",
     "@solana/web3.js": "^1.78.0",
     "axios": "^1.5.0",
+    "bs58": "^5.0.0",
     "concurrently": "^8.2.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "form-data": "^4.0.2",
     "node-cron": "^3.0.2",
+    "node-fetch": "^2.7.0",
     "winston": "^3.10.0"
   },
   "devDependencies": {

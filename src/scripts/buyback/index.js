@@ -6,11 +6,13 @@
 const cron = require('node-cron');
 const axios = require('axios');
 const { 
-  createKeypair, 
-  getConnection, 
-  getSolBalance,
-  burnTokens 
-} = require('../utils/solana');
+  Connection, 
+  PublicKey, 
+  Transaction, 
+  TransactionInstruction,
+  Keypair,
+  sendAndConfirmTransaction 
+} = require('@solana/web3.js');
 const { fetchTokenPrice } = require('../utils/priceOracle');
 const logger = require('../utils/logger').buyback;
 const fileStorage = require('../utils/fileStorage');
@@ -70,29 +72,72 @@ const claimRewards = async () => {
   try {
     logger.info('Claiming creator rewards');
     
-    // TODO: Integrate with pump.fun's API to claim rewards
-    // This is a placeholder implementation
-    // In production, you would call their API
+    // Get keypair
+    const keypair = createKeypair();
     
-    // For now, simulate successful claim
-    const claimAmount = config.rewardThreshold;
-    const txSignature = 'simulated_claim_tx_signature';
+    // Create connection to Solana
+    const connection = getConnection();
+    
+    // Get the latest blockhash
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    
+    // Create transaction
+    // Note: You'll need to replace these values with the correct ones from the decoded transaction
+    const transaction = new Transaction().add(
+      new TransactionInstruction({
+        keys: [
+          { pubkey: keypair.publicKey, isSigner: true, isWritable: true },
+          // This is the account we saw in the network traffic, likely related to the rewards program
+          { pubkey: new PublicKey('GHhV8rbzfxsDQuFffQJ69keGsGRB1pE9eYt4UrxiDSF'), isSigner: false, isWritable: true },
+          // Add more account keys as needed based on the actual program requirements
+        ],
+        // Replace with the actual program ID that handles reward claims
+        programId: new PublicKey('PROGRAM_ID_HERE'),
+        // Replace with the correct instruction data for claiming rewards
+        data: Buffer.from([/* instruction data */])
+      })
+    );
+    
+    // Set recent blockhash and fee payer
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = keypair.publicKey;
+    
+    // Simulate transaction to check if it will succeed
+    const simulation = await connection.simulateTransaction(transaction);
+    if (simulation.value.err) {
+      logger.error(`Simulation failed: ${JSON.stringify(simulation.value.err)}`);
+      return { success: false, error: 'Transaction simulation failed' };
+    }
+    
+    // Send and confirm transaction
+    const signature = await sendAndConfirmTransaction(
+      connection,
+      transaction,
+      [keypair],
+      {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+        commitment: 'confirmed',
+      }
+    );
+    
+    logger.info(`Claimed rewards successfully with tx: ${signature}`);
     
     // Record the claim in storage
+    const claimAmount = await getSolBalance(keypair.publicKey.toString());
     const rewardRecord = {
       solAmount: claimAmount,
-      claimTxSignature: txSignature,
+      claimTxSignature: signature,
       status: 'claimed',
       timestamp: new Date().toISOString()
     };
     
     const savedReward = fileStorage.saveRecord('rewards', rewardRecord);
     
-    logger.info(`Claimed ${claimAmount} SOL with tx: ${txSignature}`);
     return {
       success: true,
       amount: claimAmount,
-      txSignature,
+      txSignature: signature,
       rewardId: savedReward.id
     };
   } catch (error) {

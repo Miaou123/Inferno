@@ -8,6 +8,34 @@
     "totalBurned": 0,
     "buybackBurned": 0,
     "milestoneBurned": 0,
-    "marketCap": 0
+    "marketCap": 0,
+    "priceInSol": 0.00001500,
+    "priceInUsd": 0.003000
+  },
+  {
+    "id": "1747179479250-abd6y42",
+    "timestamp": "2025-05-14T00:04:39.250Z",
+    "totalSupply": 1000000000,
+    "circulatingSupply": 700000000,
+    "reserveWalletBalance": 300000000,
+    "totalBurned": 27503892,
+    "buybackBurned": 27503892,
+    "milestoneBurned": 0,
+    "marketCap": 350000,
+    "priceInSol": 0.00001824,
+    "priceInUsd": 0.003350
+  },
+  {
+    "id": "1747181479250-kja5l42",
+    "timestamp": "2025-05-14T01:04:39.250Z",
+    "totalSupply": 877496108,
+    "circulatingSupply": 577496108,
+    "reserveWalletBalance": 300000000,
+    "totalBurned": 122503892,
+    "buybackBurned": 27503892,
+    "milestoneBurned": 95000000,
+    "marketCap": 389000,
+    "priceInSol": 0.00001912,
+    "priceInUsd": 0.003450
   }
 ]

@@ -4,21 +4,27 @@
     "marketCap": 100000,
     "burnAmount": 50000000,
     "percentOfSupply": 5.00,
-    "completed": false
+    "completed": true,
+    "completedAt": "2025-05-13T20:58:49.250Z",
+    "transactionHash": "Mi1est0neBurnTxHash100k"
   },
   {
     "id": "milestone-200k",
     "marketCap": 200000,
     "burnAmount": 25000000,
     "percentOfSupply": 2.50,
-    "completed": false
+    "completed": true,
+    "completedAt": "2025-05-13T22:25:49.250Z",
+    "transactionHash": "Mi1est0neBurnTxHash200k"
   },
   {
     "id": "milestone-300k",
     "marketCap": 300000,
     "burnAmount": 20000000,
     "percentOfSupply": 2.00,
-    "completed": false
+    "completed": true,
+    "completedAt": "2025-05-14T00:52:09.250Z",
+    "transactionHash": "Mi1est0neBurnTxHash300k"
   },
   {
     "id": "milestone-500k",

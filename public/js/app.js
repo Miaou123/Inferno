@@ -27,6 +27,7 @@ async function initializeDashboard() {
         // Fetch initial data
         await fetchAndUpdateMetrics();
         await fetchAndUpdateMilestones();
+        await fetchAndUpdateRewards();
         
         // Set up UI interactions
         setupTabSwitching();
@@ -74,7 +75,8 @@ async function refreshData(animate = false) {
     try {
         await Promise.all([
             fetchAndUpdateMetrics(animate),
-            fetchAndUpdateMilestones()
+            fetchAndUpdateMilestones(),
+            fetchAndUpdateRewards()
         ]);
         
         console.log('Dashboard data refreshed');
@@ -203,6 +205,75 @@ function updateMilestonesUI(data) {
     }
     
     // More advanced milestone UI updates could be implemented here
+}
+
+/**
+ * Fetch rewards data from API and update UI
+ */
+async function fetchAndUpdateRewards() {
+    try {
+        const response = await fetch('/api/rewards');
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Rewards data:', data);
+        
+        // Update rewards UI
+        updateRewardsUI(data);
+        
+    } catch (error) {
+        console.error('Error fetching rewards:', error);
+        throw error;
+    }
+}
+
+/**
+ * Update rewards UI with data from API
+ * @param {Object} data - Rewards data from API
+ */
+function updateRewardsUI(data) {
+    if (!data || !data.rewards) {
+        return;
+    }
+    
+    const rewardsTableBody = document.querySelector('#rewards-table tbody');
+    if (!rewardsTableBody) {
+        return;
+    }
+    
+    // Clear current table
+    rewardsTableBody.innerHTML = '';
+    
+    // Add each reward entry
+    data.rewards.forEach(reward => {
+        const row = document.createElement('tr');
+        
+        // Format date
+        const date = new Date(reward.timestamp);
+        const formattedDate = date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+        
+        // Create table row
+        row.innerHTML = `
+            <td>${formattedDate}</td>
+            <td>${reward.rewardAmount.toFixed(4)} SOL</td>
+            <td>$${reward.rewardAmountUsd.toFixed(2)}</td>
+            <td>
+                <a href="https://solscan.io/tx/${reward.burnTxHash}" target="_blank" class="tx-link">
+                    ${reward.burnTxHash.substring(0, 6)}...${reward.burnTxHash.substring(reward.burnTxHash.length - 4)}
+                    <span class="link-icon">🔗</span>
+                </a>
+            </td>
+        `;
+        
+        rewardsTableBody.appendChild(row);
+    });
 }
 
 /**
