@@ -222,6 +222,95 @@ const burnTracker = {
       return 0;
     }
   },
+
+  /**
+   * Get total milestone burns
+   * @returns {Number} Total milestone burns
+   */
+  getTotalMilestoneBurns: () => {
+    try {
+      logger.debug('[BurnTracker] Getting total milestone burns');
+      
+      const burns = fileStorage.readData(fileStorage.FILES.burns);
+      logger.debug(`[BurnTracker] Found ${burns.length} burn records to analyze for milestone burns`);
+      
+      // Filter and sum milestone burns
+      const milestoneBurns = burns
+        .filter(burn => burn.burnType === 'milestone')
+        .reduce((total, burn) => {
+          logger.debug(`[BurnTracker] Adding milestone burn: ${burn.burnAmount || 0} tokens (ID: ${burn.id})`);
+          return total + (burn.burnAmount || 0);
+        }, 0);
+      
+      logger.debug(`[BurnTracker] Total milestone burns: ${milestoneBurns.toLocaleString()} tokens`);
+      return milestoneBurns;
+    } catch (error) {
+      logger.error(`[BurnTracker] Error getting total milestone burns: ${error.message}`);
+      return 0;
+    }
+  },
+  
+  /**
+   * Get completed milestone data
+   * @returns {Object} Milestone data
+   */
+  getMilestoneData: () => {
+    try {
+      logger.debug('[BurnTracker] Getting milestone data');
+      
+      // Get milestones
+      const milestones = fileStorage.readData(fileStorage.FILES.milestones);
+      const completedMilestones = milestones.filter(m => m.completed);
+      
+      logger.debug(`[BurnTracker] Found ${completedMilestones.length} completed milestones out of ${milestones.length} total`);
+      
+      // Get milestone burns for double checking
+      const milestoneBurns = fileStorage.readData(fileStorage.FILES.burns)
+        .filter(burn => burn.burnType === 'milestone');
+      
+      // Calculate total burned from milestones
+      const totalBurnedFromMilestones = completedMilestones.reduce((total, milestone) => {
+        return total + (milestone.burnAmount || 0);
+      }, 0);
+      
+      // Alternative calculation from burn records
+      const totalBurnedFromRecords = milestoneBurns.reduce((total, burn) => {
+        return total + (burn.burnAmount || 0);
+      }, 0);
+      
+      logger.debug(`[BurnTracker] Milestone burn calculations:
+        - From milestones: ${totalBurnedFromMilestones.toLocaleString()} tokens
+        - From burn records: ${totalBurnedFromRecords.toLocaleString()} tokens
+        - Using: ${Math.max(totalBurnedFromMilestones, totalBurnedFromRecords).toLocaleString()} tokens`);
+      
+      // Use the larger value to be safe
+      const totalMilestoneBurned = Math.max(totalBurnedFromMilestones, totalBurnedFromRecords);
+      
+      // Calculate percentage of supply
+      const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+      const burnPercentage = (totalMilestoneBurned / initialSupply) * 100;
+      
+      // Find next milestone to complete
+      const nextMilestone = milestones.find(m => !m.completed);
+      
+      return {
+        completedCount: completedMilestones.length,
+        totalCount: milestones.length,
+        totalBurned: totalMilestoneBurned,
+        burnPercentage: parseFloat(burnPercentage.toFixed(2)),
+        nextMilestone
+      };
+    } catch (error) {
+      logger.error(`[BurnTracker] Error getting milestone data: ${error.message}`);
+      return {
+        completedCount: 0,
+        totalCount: 0,
+        totalBurned: 0,
+        burnPercentage: 0,
+        nextMilestone: null
+      };
+    }
+  },
   
   /**
    * Update metrics with new burn data
@@ -325,6 +414,7 @@ const burnTracker = {
       const burnCounts = burnTracker.getBurnCountByType();
       const burns24h = burnTracker.getBurnsLast24Hours();
       const recentBurns = burnTracker.getRecentBurns(5);
+      const milestoneData = burnTracker.getMilestoneData();
       
       const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
       const burnPercentage = (totalBurned / initialSupply) * 100;
@@ -338,6 +428,7 @@ const burnTracker = {
         initialSupply,
         currentSupply: initialSupply - totalBurned,
         burnPercentage,
+        milestoneData,
         timestamp: new Date().toISOString()
       };
       
@@ -347,7 +438,8 @@ const burnTracker = {
         - Milestone: ${burnsByType.milestone.toLocaleString()} tokens
         - Current supply: ${stats.currentSupply.toLocaleString()} tokens
         - 24h burn: ${burns24h.toLocaleString()} tokens
-        - Burn counts: ${burnCounts.total} total (${burnCounts.automated} automated, ${burnCounts.milestone} milestone)`);
+        - Burn counts: ${burnCounts.total} total (${burnCounts.automated} automated, ${burnCounts.milestone} milestone)
+        - Milestone completed: ${milestoneData.completedCount} of ${milestoneData.totalCount}`);
       
       return stats;
     } catch (error) {
@@ -361,6 +453,12 @@ const burnTracker = {
         initialSupply: 1000000000,
         currentSupply: 1000000000,
         burnPercentage: 0,
+        milestoneData: {
+          completedCount: 0,
+          totalCount: 0,
+          totalBurned: 0,
+          burnPercentage: 0
+        },
         timestamp: new Date().toISOString()
       };
     }

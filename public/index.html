@@ -2116,6 +2116,8 @@
         document.addEventListener('DOMContentLoaded', function() {
 
             console.log("Page chargée, mise à jour des valeurs...");
+            debugMilestones(); // Run immediate debugging
+            fetchAndUpdateMilestones();
             updateDisplayValues();
             setupCopyAddress();
             updateMarketCap();
@@ -2127,6 +2129,11 @@
                 console.log("Running delayed updateTokenAddress...");
                 updateTokenAddress();
             }, 500);
+
+            setTimeout(() => {
+                debugMilestoneLadder();
+                updateLadderOnForceUpdate();
+            }, 1500);
                         
             // Set up refresh interval (every 2 minutes)
             setInterval(getBurnAmount, 120000);
@@ -2466,110 +2473,504 @@
                 }
                 }
 
-                async function fetchAndUpdateMilestones() {
-                    try {
-                        const response = await fetch('/api/milestones');
-                        
-                        if (!response.ok) {
-                            throw new Error(`API error: ${response.status}`);
-                        }
-                        
-                        const data = await response.json();
-                        console.log('Milestones data:', data);
-                        
-                        // Update milestones UI
-                        updateMilestonesUI(data);
-                        
-                        // Update milestone ladder visualization
-                        updateMilestoneLadder(data);
-                        
-                        return data;
-                    } catch (error) {
-                        console.error('Error fetching milestones:', error);
-                        throw error;
-                    }
-                }
+                /**
+ * Fetch milestones data from API and update UI
+ */
+async function fetchAndUpdateMilestones() {
+  console.log("==== MILESTONE DEBUG ====");
+  console.log("Starting milestone data fetch");
+  try {
+    const response = await fetch('/api/milestones');
+    
+    console.log("API Response status:", response.status);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("Raw API response data:", data);
+    
+    // Make sure we have the milestone data in the correct format
+    if (!data.milestones) {
+      console.error("Missing milestones array in API response");
+      return null;
+    }
+    
+    console.log("Completed milestones:", data.completedMilestones || data.milestones.filter(m => m.completed).length);
+    console.log("Total milestones:", data.totalMilestones || data.milestones.length);
+    console.log("Next uncompleted milestone:", data.progress?.nextMilestone || data.milestones.find(m => !m.completed));
+    console.log("Total milestone burned:", data.totalMilestoneBurned);
+    
+    // Update milestones UI
+    updateMilestonesUI(data);
+    
+    // Update milestone ladder visualization
+    updateMilestoneLadder(data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching milestones:', error);
+    return null;
+  }
+}
 
-                // This function updates the milestone stats cards
-                    function updateMilestonesUI(data) {
-                        console.log('Updating milestone UI with data:', data);
-                        
-                        if (!data || !data.milestones) {
-                            console.error('Missing required milestone data');
-                            return;
-                        }
-                        
-                        // Update current market cap display
-                        const marketCapElement = document.getElementById('current-marketcap');
-                        if (marketCapElement && data.currentMarketCap) {
-                            const formattedMarketCap = formatCurrency(data.currentMarketCap);
-                            console.log(`Setting market cap display: $${formattedMarketCap}`);
-                            marketCapElement.innerHTML = `Current Market Cap: <strong>$${formattedMarketCap}</strong>`;
-                        }
-                        
-                        // Get milestone stats from API data
-                        const completedMilestones = data.milestones.filter(m => m.completed);
-                        const completedCount = completedMilestones.length;
-                        const totalCount = data.milestones.length;
-                        
-                        console.log(`Milestones completed: ${completedCount} of ${totalCount}`);
-                        
-                        // Set "Milestones Completed" card
-                        const completedCountElement = document.querySelector('.milestone-burns .stat-card:nth-child(1) .stat-value');
-                        if (completedCountElement) {
-                            completedCountElement.textContent = `${completedCount} of ${totalCount}`;
-                            console.log(`Updated milestones completed: ${completedCount} of ${totalCount}`);
-                        }
-                        
-                        // Calculate total tokens burned through milestones
-                        const totalMilestoneBurned = data.totalMilestoneBurned || 
-                            completedMilestones.reduce((sum, m) => sum + (m.burnAmount || 0), 0);
-                        
-                        console.log(`Total milestone burned: ${totalMilestoneBurned.toLocaleString()} tokens`);
-                        
-                        // Set "Milestone Tokens Burned" card
-                        const milestoneBurnElement = document.querySelector('.milestone-burns .stat-card:nth-child(2) .stat-value');
-                        if (milestoneBurnElement) {
-                            milestoneBurnElement.textContent = totalMilestoneBurned.toLocaleString();
-                            console.log(`Updated milestone tokens burned: ${totalMilestoneBurned.toLocaleString()}`);
-                        }
-                        
-                        // Calculate percentage of supply burned
-                        const initialSupply = 1000000000; // 1 billion
-                        const burnPercentage = data.burnPercentage || ((totalMilestoneBurned / initialSupply) * 100).toFixed(2);
-                        
-                        console.log(`Burn percentage: ${burnPercentage}%`);
-                        
-                        // Set "Supply Burned via Milestones" card
-                        const burnPercentageElement = document.querySelector('.milestone-burns .stat-card:nth-child(3) .stat-value');
-                        if (burnPercentageElement) {
-                            burnPercentageElement.textContent = `${burnPercentage}%`;
-                            console.log(`Updated supply burned percentage: ${burnPercentage}%`);
-                        }
-                        
-                        // Find next milestone to complete
-                        const nextMilestone = data.progress?.nextMilestone || 
-                            data.milestones.find(m => !m.completed);
-                        
-                        if (nextMilestone) {
-                            console.log(`Next milestone: $${nextMilestone.marketCap.toLocaleString()}`);
-                            
-                            // Set "Next Milestone" card
-                            const nextMilestoneElement = document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-value');
-                            const nextMilestoneSubElement = document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-sub');
-                            
-                            if (nextMilestoneElement) {
-                                const formattedMcap = formatCurrency(nextMilestone.marketCap);
-                                nextMilestoneElement.textContent = `$${formattedMcap}`;
-                                console.log(`Updated next milestone: $${formattedMcap}`);
-                            }
-                            
-                            if (nextMilestoneSubElement) {
-                                nextMilestoneSubElement.textContent = `${nextMilestone.percentOfSupply.toFixed(2)}% Burn (${nextMilestone.burnAmount.toLocaleString()} tokens)`;
-                                console.log(`Updated next milestone details: ${nextMilestone.percentOfSupply.toFixed(2)}% (${nextMilestone.burnAmount.toLocaleString()} tokens)`);
-                            }
-                        }
-                    }
+/**
+ * Update milestones UI with data from API
+ * @param {Object} data - Milestones data from API
+ */
+ function updateMilestonesUI(data) {
+  console.log("==== UPDATE MILESTONES UI ====");
+  console.log("Milestone data to update UI:", data);
+  
+  if (!data || !data.milestones) {
+    console.error("Invalid milestone data format");
+    return;
+  }
+  
+  // Update current market cap display
+  const marketCapElement = document.getElementById('current-marketcap');
+  if (marketCapElement && data.currentMarketCap) {
+    const formattedMarketCap = formatCurrency(data.currentMarketCap);
+    console.log(`Setting market cap: $${formattedMarketCap}`);
+    marketCapElement.innerHTML = `Current Market Cap: <strong>$${formattedMarketCap}</strong>`;
+  }
+  
+  // Update milestone stats
+  // 1. Completed milestones count
+  const completedCount = data.completedMilestones || data.milestones.filter(m => m.completed).length;
+  const totalCount = data.totalMilestones || data.milestones.length;
+  
+  const completedCountElement = document.querySelector('.milestone-burns .stat-card:nth-child(1) .stat-value');
+  if (completedCountElement) {
+    console.log(`Setting completed count: ${completedCount} of ${totalCount}`);
+    completedCountElement.textContent = `${completedCount} of ${totalCount}`;
+  } else {
+    console.error("Completed count element not found!");
+  }
+  
+  // 2. Total milestone burns amount
+  const totalMilestoneBurned = data.totalMilestoneBurned || 0;
+  
+  const milestoneBurnElement = document.querySelector('.milestone-burns .stat-card:nth-child(2) .stat-value');
+  if (milestoneBurnElement) {
+    console.log(`Setting milestone burn total: ${totalMilestoneBurned.toLocaleString()}`);
+    milestoneBurnElement.textContent = totalMilestoneBurned.toLocaleString();
+  } else {
+    console.error("Milestone burn element not found!");
+  }
+  
+  // 3. Percentage of supply burned via milestones
+  const burnPercentage = data.burnPercentage || 0;
+  
+  const milestoneBurnPercentElement = document.querySelector('.milestone-burns .stat-card:nth-child(3) .stat-value');
+  if (milestoneBurnPercentElement) {
+    console.log(`Setting milestone burn percentage: ${burnPercentage}%`);
+    milestoneBurnPercentElement.textContent = `${burnPercentage}%`;
+  } else {
+    console.error("Milestone burn percentage element not found!");
+  }
+  
+  // 4. Next milestone
+  const nextMilestone = data.progress?.nextMilestone || data.milestones.find(m => !m.completed);
+  
+  if (nextMilestone) {
+    const nextMilestoneElement = document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-value');
+    const nextMilestoneSubElement = document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-sub');
+    
+    if (nextMilestoneElement) {
+      const formattedMcap = formatCurrency(nextMilestone.marketCap);
+      console.log(`Setting next milestone: $${formattedMcap}`);
+      nextMilestoneElement.textContent = `$${formattedMcap}`;
+    } else {
+      console.error("Next milestone element not found!");
+    }
+    
+    if (nextMilestoneSubElement) {
+      const detail = `${nextMilestone.percentOfSupply.toFixed(2)}% Burn (${nextMilestone.burnAmount.toLocaleString()} tokens)`;
+      console.log(`Setting next milestone details: ${detail}`);
+      nextMilestoneSubElement.textContent = detail;
+    } else {
+      console.error("Next milestone sub element not found!");
+    }
+  } else {
+    console.log("No next milestone found (all completed?)");
+  }
+  
+  console.log("Milestone UI update complete!");
+}
+
+/**
+ * Enhanced function to update the milestone ladder visualization
+ * This function directly manipulates DOM elements to ensure the ladder shows correctly
+ */
+ function updateMilestoneLadderVisual(data) {
+  console.log("==== UPDATING MILESTONE LADDER VISUALIZATION ====");
+  
+  if (!data || !data.milestones || !data.currentMarketCap) {
+    console.error("Missing required data for milestone ladder update");
+    return;
+  }
+  
+  const currentMarketCap = data.currentMarketCap;
+  console.log(`Current market cap: $${currentMarketCap.toLocaleString()}`);
+  
+  // Set maximum milestone for scaling (final milestone at 100%)
+  const maxMarketCap = 100000000; // $100M is the final milestone
+  
+  // Calculate progress percentage (capped at 100%)
+  const progressPercentage = Math.min((currentMarketCap / maxMarketCap) * 100, 100);
+  console.log(`Setting ladder progress to: ${progressPercentage.toFixed(2)}%`);
+  
+  // Update main progress track
+  const progressTrack = document.querySelector('.ladder-track .progress-track');
+  if (progressTrack) {
+    progressTrack.style.width = `${progressPercentage}%`;
+  } else {
+    console.error("Progress track element not found!");
+  }
+  
+  // Find all milestone markers and reset their state
+  const allMarkers = document.querySelectorAll('.milestone-marker');
+  allMarkers.forEach(marker => {
+    marker.classList.remove('completed', 'next');
+    
+    // Reset dots/flames
+    const dotOrFlame = marker.querySelector('.dot, .animated-flame');
+    if (dotOrFlame) {
+      // Replace with simple dot if it's a flame
+      if (dotOrFlame.classList.contains('animated-flame')) {
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dotOrFlame.replaceWith(dot);
+      }
+    }
+  });
+  
+  // Calculate which markers should be updated
+  data.milestones.forEach(milestone => {
+    // For each milestone, we need to find the corresponding marker in the DOM
+    const markerPosition = (milestone.marketCap / maxMarketCap) * 100;
+    
+    // Find the marker at this approximate position
+    // Using a small threshold for position matching
+    const markerSelector = `.milestone-marker[style*="left: ${Math.round(markerPosition)}%"], 
+                           .milestone-marker[style*="left:${Math.round(markerPosition)}%"],
+                           .milestone-marker[style*="left: ${Math.floor(markerPosition)}%"], 
+                           .milestone-marker[style*="left:${Math.floor(markerPosition)}%"],
+                           .milestone-marker[style*="left: ${Math.ceil(markerPosition)}%"], 
+                           .milestone-marker[style*="left:${Math.ceil(markerPosition)}%"]`;
+    
+    const marker = document.querySelector(markerSelector);
+    
+    if (marker) {
+      console.log(`Found marker for $${milestone.marketCap.toLocaleString()} milestone at position ${markerPosition.toFixed(2)}%`);
+      
+      // Update marker state based on milestone status
+      if (milestone.completed) {
+        console.log(`Marking $${milestone.marketCap.toLocaleString()} as completed`);
+        marker.classList.add('completed');
+        
+        // Replace dot with flame animation
+        const dot = marker.querySelector('.dot');
+        if (dot) {
+          const flameHTML = `
+            <div class="animated-flame">
+                <div class="flame-particle"></div>
+                <div class="flame-particle"></div>
+                <div class="flame-particle"></div>
+            </div>
+          `;
+          dot.outerHTML = flameHTML;
+        }
+      } 
+      else if (currentMarketCap >= milestone.marketCap) {
+        // Milestone has been reached but not completed (pending)
+        console.log(`Marking $${milestone.marketCap.toLocaleString()} as next (pending)`);
+        marker.classList.add('next');
+      }
+      
+      // Update tooltip information
+      const tooltipDetail = marker.querySelector('.tooltip-detail');
+      if (tooltipDetail) {
+        tooltipDetail.innerHTML = `
+          <span>Burn: ${milestone.burnAmount.toLocaleString()} tokens</span>
+          <span>(${milestone.percentOfSupply.toFixed(2)}% of supply)</span>
+        `;
+        
+        // Add progress bar for next pending milestone
+        if (currentMarketCap >= milestone.marketCap && !milestone.completed) {
+          const progress = Math.min(Math.round((currentMarketCap / milestone.marketCap) * 100), 99);
+          
+          tooltipDetail.innerHTML += `
+            <div class="milestone-progress">
+                <div class="milestone-progress-bar">
+                    <div class="milestone-progress-fill" style="width: ${progress}%"></div>
+                </div>
+                <div class="milestone-progress-text">${progress}%</div>
+            </div>
+          `;
+        }
+      }
+    } else {
+      console.warn(`Could not find marker for $${milestone.marketCap.toLocaleString()} milestone at position ${markerPosition.toFixed(2)}%`);
+    }
+  });
+  
+  // Update labels based on milestone status
+  updateMilestoneLadderLabels(data);
+  
+  console.log("Milestone ladder visualization update complete");
+}
+
+/**
+ * Update milestone labels to match marker states
+ */
+function updateMilestoneLadderLabels(data) {
+  console.log("Updating milestone ladder labels");
+  
+  if (!data || !data.milestones) {
+    return;
+  }
+  
+  const maxMarketCap = 100000000; // $100M
+  
+  // Find all labels and reset their state
+  const allLabels = document.querySelectorAll('.milestone-label, .percentage-label');
+  allLabels.forEach(label => {
+    label.classList.remove('completed', 'next');
+  });
+  
+  // Update labels based on milestone status
+  data.milestones.forEach(milestone => {
+    const labelPosition = (milestone.marketCap / maxMarketCap) * 100;
+    
+    // Find milestone label ($ amount)
+    const labelSelector = `.milestone-label[style*="left: ${Math.round(labelPosition)}%"], 
+                          .milestone-label[style*="left:${Math.round(labelPosition)}%"],
+                          .milestone-label[style*="left: ${Math.floor(labelPosition)}%"], 
+                          .milestone-label[style*="left:${Math.floor(labelPosition)}%"],
+                          .milestone-label[style*="left: ${Math.ceil(labelPosition)}%"], 
+                          .milestone-label[style*="left:${Math.ceil(labelPosition)}%"]`;
+    
+    const label = document.querySelector(labelSelector);
+    
+    if (label) {
+      if (milestone.completed) {
+        label.classList.add('completed');
+      } else if (data.currentMarketCap >= milestone.marketCap) {
+        label.classList.add('next');
+      }
+    }
+    
+    // Find percentage label
+    const percentSelector = `.percentage-label[style*="left: ${Math.round(labelPosition)}%"], 
+                            .percentage-label[style*="left:${Math.round(labelPosition)}%"],
+                            .percentage-label[style*="left: ${Math.floor(labelPosition)}%"], 
+                            .percentage-label[style*="left:${Math.floor(labelPosition)}%"],
+                            .percentage-label[style*="left: ${Math.ceil(labelPosition)}%"], 
+                            .percentage-label[style*="left:${Math.ceil(labelPosition)}%"]`;
+    
+    const percentLabel = document.querySelector(percentSelector);
+    
+    if (percentLabel) {
+      if (milestone.completed) {
+        percentLabel.classList.add('completed');
+      } else if (data.currentMarketCap >= milestone.marketCap) {
+        percentLabel.classList.add('next');
+      }
+    }
+  });
+}
+
+/**
+ * Debug function to help identify milestone ladder elements
+ */
+function debugMilestoneLadder() {
+  console.log("==== DEBUGGING MILESTONE LADDER ====");
+  
+  // Check progress track
+  const ladderTrack = document.querySelector('.ladder-track');
+  const progressTrack = document.querySelector('.ladder-track .progress-track');
+  
+  console.log("Track elements:", {
+    ladderTrack: ladderTrack ? "Found" : "Missing",
+    progressTrack: progressTrack ? "Found" : "Missing", 
+    currentWidth: progressTrack?.style.width
+  });
+  
+  // Check milestone markers
+  const markers = document.querySelectorAll('.milestone-marker');
+  console.log(`Found ${markers.length} milestone markers`);
+  
+  // Log positions of all markers
+  markers.forEach((marker, index) => {
+    const position = marker.style.left;
+    const isCompleted = marker.classList.contains('completed');
+    const isNext = marker.classList.contains('next');
+    const hasFlame = marker.querySelector('.animated-flame') !== null;
+    const hasDot = marker.querySelector('.dot') !== null;
+    
+    console.log(`Marker ${index+1}: Position=${position}, Completed=${isCompleted}, Next=${isNext}, Flame=${hasFlame}, Dot=${hasDot}`);
+  });
+  
+  // Check labels
+  const milestoneLabels = document.querySelectorAll('.milestone-label');
+  const percentageLabels = document.querySelectorAll('.percentage-label');
+  
+  console.log(`Found ${milestoneLabels.length} milestone labels`);
+  console.log(`Found ${percentageLabels.length} percentage labels`);
+  
+  // Check for any completion mismatch
+  const completedMarkers = document.querySelectorAll('.milestone-marker.completed');
+  const completedLabels = document.querySelectorAll('.milestone-label.completed');
+  
+  console.log(`Completed elements: ${completedMarkers.length} markers, ${completedLabels.length} labels`);
+  
+  if (completedMarkers.length !== completedLabels.length) {
+    console.warn("Mismatch between completed markers and labels!");
+  }
+}
+
+// Update the forceMilestoneUpdate function to also update the ladder
+function forceMilestoneUpdate() {
+  console.log("====== FORCING MILESTONE UPDATE ======");
+  
+  // First, ensure milestone tab is active
+  const milestoneTab = document.getElementById('milestone-burn-tab');
+  const automatedTab = document.getElementById('automated-burn-tab');
+  const milestoneBurns = document.querySelector('.milestone-burns');
+  const automatedBurns = document.querySelector('.automated-burns');
+  
+  if (milestoneTab && automatedTab && milestoneBurns && automatedBurns) {
+    console.log("Activating milestone tab");
+    milestoneTab.classList.add('active');
+    automatedTab.classList.remove('active');
+    milestoneBurns.classList.add('active');
+    automatedBurns.classList.remove('active');
+  }
+  
+  // Fetch fresh milestone data
+  fetch('/api/milestones')
+    .then(response => response.json())
+    .then(data => {
+      console.log("Fresh milestone data received:", data);
+      
+      // Directly update milestone card values
+      const completedCountElement = document.querySelector('.milestone-burns .stat-card:nth-child(1) .stat-value');
+      const milestoneBurnElement = document.querySelector('.milestone-burns .stat-card:nth-child(2) .stat-value');
+      const milestoneBurnPercentElement = document.querySelector('.milestone-burns .stat-card:nth-child(3) .stat-value');
+      
+      if (completedCountElement) {
+        const completedCount = data.completedMilestones || data.progress?.completedCount || data.milestones?.filter(m => m.completed).length || 0;
+        const totalCount = data.totalMilestones || data.progress?.totalCount || data.milestones?.length || 0;
+        completedCountElement.textContent = `${completedCount} of ${totalCount}`;
+        console.log(`Updated completed count: ${completedCount} of ${totalCount}`);
+      }
+      
+      if (milestoneBurnElement) {
+        const totalMilestoneBurned = data.totalMilestoneBurned || 0;
+        milestoneBurnElement.textContent = totalMilestoneBurned.toLocaleString();
+        console.log(`Updated milestone burn total: ${totalMilestoneBurned.toLocaleString()}`);
+      }
+      
+      if (milestoneBurnPercentElement) {
+        const burnPercentage = data.burnPercentage || 0;
+        milestoneBurnPercentElement.textContent = `${burnPercentage}%`;
+        console.log(`Updated milestone burn percentage: ${burnPercentage}%`);
+      }
+      
+      // Update next milestone card
+      const nextMilestone = data.progress?.nextMilestone || data.milestones?.find(m => !m.completed);
+      if (nextMilestone) {
+        const nextMilestoneElement = document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-value');
+        const nextMilestoneSubElement = document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-sub');
+        
+        if (nextMilestoneElement) {
+          const formattedMcap = formatCurrency(nextMilestone.marketCap);
+          nextMilestoneElement.textContent = `$${formattedMcap}`;
+          console.log(`Updated next milestone: $${formattedMcap}`);
+        }
+        
+        if (nextMilestoneSubElement) {
+          const detail = `${nextMilestone.percentOfSupply.toFixed(2)}% Burn (${nextMilestone.burnAmount.toLocaleString()} tokens)`;
+          nextMilestoneSubElement.textContent = detail;
+          console.log(`Updated next milestone details: ${detail}`);
+        }
+      }
+      
+      // Now also update the milestone ladder
+      updateMilestoneLadderVisual(data);
+      
+      console.log("Forced milestone update complete");
+    })
+    .catch(error => {
+      console.error("Error during forced milestone update:", error);
+    });
+}
+
+
+
+// Add this to your forceMilestoneUpdate function to also update the ladder
+function updateLadderOnForceUpdate() {
+  fetch('/api/milestones')
+    .then(response => response.json())
+    .then(data => {
+      console.log("Updating milestone ladder with fresh data");
+      updateMilestoneLadderVisual(data);
+      setTimeout(debugMilestoneLadder, 500); // Debug after update
+    })
+    .catch(error => {
+      console.error("Error updating ladder:", error);
+    });
+}
+
+// Helper function for market cap debugging
+function debugMilestones() {
+  console.log("==== DEBUG MILESTONES ====");
+  
+  // Check API call for milestones
+  fetch('/api/milestones')
+    .then(response => {
+      console.log("API response:", response.status, response.statusText);
+      return response.json();
+    })
+    .then(data => {
+      console.log("API data received:", data);
+      
+      // Check critical data
+      console.log("Milestones found:", data.milestones?.length || "undefined");
+      console.log("Completed milestones:", data.milestones?.filter(m => m.completed).length || "undefined");
+      console.log("Next milestone:", data.progress?.nextMilestone || data.milestones?.find(m => !m.completed) || "not found");
+      console.log("Total milestone burned:", data.totalMilestoneBurned || "undefined");
+      
+      // Check DOM elements
+      console.log("==== DOM ELEMENT CHECK ====");
+      console.log("Milestone stats container:", document.querySelector('.burn-stats-grid'));
+      console.log("Card 1 (Milestones Completed):", document.querySelector('.milestone-burns .stat-card:nth-child(1) .stat-value'));
+      console.log("Card 2 (Tokens Burned):", document.querySelector('.milestone-burns .stat-card:nth-child(2) .stat-value'));
+      console.log("Card 3 (Percentage Burned):", document.querySelector('.milestone-burns .stat-card:nth-child(3) .stat-value'));
+      console.log("Card 4 (Next Milestone):", document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-value'));
+      console.log("Card 4 Sub:", document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-sub'));
+      
+      // Check milestone ladder
+      console.log("Ladder container:", document.querySelector('.burn-ladder'));
+      console.log("Progress track:", document.querySelector('.ladder-track .progress-track'));
+      console.log("First milestone marker:", document.querySelector('.milestone-marker'));
+      
+      // Try to update UI with this data
+      try {
+        updateMilestonesUI(data);
+        updateMilestoneLadder(data);
+        console.log("Update milestone UI functions executed successfully");
+      } catch (error) {
+        console.error("Error updating milestone UI:", error);
+      }
+    })
+    .catch(error => {
+      console.error("Error fetching milestone data:", error);
+    });
+}
 
 
             // Add this function to update UI with token address

@@ -298,8 +298,7 @@ app.get('/api/burns', async (req, res) => {
   }
 });
 
-// Get milestone status
-// Get milestone status
+// Updated /api/milestones endpoint in server.js
 app.get('/api/milestones', async (req, res) => {
   try {
     console.log("==== API DEBUG: /api/milestones ====");
@@ -312,12 +311,9 @@ app.get('/api/milestones', async (req, res) => {
     const currentMarketCap = await getMarketCap();
     console.log(`Current market cap: ${currentMarketCap}`);
     
-    // Calculate burn totals
-    const completedMilestones = milestones.filter(m => m.completed);
-    console.log(`Completed milestones: ${completedMilestones.length}`);
-    
-    const totalMilestoneBurned = completedMilestones.reduce((sum, m) => sum + (m.burnAmount || 0), 0);
-    console.log(`Total milestone burned: ${totalMilestoneBurned.toLocaleString()} tokens`);
+    // Get milestone stats directly from burnTracker
+    const milestoneData = burnTracker.getMilestoneData();
+    console.log("Milestone data from burnTracker:", milestoneData);
     
     // Enhance with progress information
     const enhancedMilestones = milestones.map(milestone => {
@@ -335,16 +331,37 @@ app.get('/api/milestones', async (req, res) => {
     const nextMilestone = enhancedMilestones.find(m => !m.completed);
     console.log("Next milestone:", nextMilestone ? nextMilestone.marketCap : "none");
     
+    // Calculate progress towards next milestone if there is one
+    let nextMilestoneProgress = 0;
+    if (nextMilestone) {
+      nextMilestoneProgress = Math.min(Math.round((currentMarketCap / nextMilestone.marketCap) * 100), 99);
+      console.log(`Progress towards next milestone: ${nextMilestoneProgress}%`);
+    }
+    
+    // Get total burned milestone data from burns directly
+    const milestoneBurns = fileStorage.readData(fileStorage.FILES.burns)
+      .filter(burn => burn.burnType === 'milestone');
+    
+    const totalMilestoneBurned = milestoneBurns.reduce((sum, burn) => sum + (burn.burnAmount || 0), 0);
+    console.log(`Total milestone burned (from burns records): ${totalMilestoneBurned.toLocaleString()} tokens`);
+    
+    // Calculate percentage of supply burned via milestones
+    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+    const milestoneBurnPercentage = (totalMilestoneBurned / initialSupply) * 100;
+    
     // Create response object with all required data
     const responseData = {
       milestones: enhancedMilestones,
       currentMarketCap,
       totalMilestoneBurned,
-      burnPercentage: ((totalMilestoneBurned / 1000000000) * 100).toFixed(2),
+      burnPercentage: milestoneBurnPercentage.toFixed(2),
+      completedMilestones: milestoneData.completedCount,
+      totalMilestones: milestoneData.totalCount,
       progress: {
-        completedCount: completedMilestones.length,
-        totalCount: milestones.length,
-        nextMilestone
+        completedCount: milestoneData.completedCount,
+        totalCount: milestoneData.totalCount,
+        nextMilestone,
+        nextMilestoneProgress
       }
     };
     
