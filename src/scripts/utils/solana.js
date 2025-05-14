@@ -38,10 +38,7 @@ const getConnection = () => {
  */
 const createKeypair = (privateKeyString = process.env.SOLANA_PRIVATE_KEY) => {
   try {
-    // In mock mode, generate a random keypair
-    if (process.env.MOCK_MODE === 'true') {
-      return Keypair.generate();
-    }
+    // We don't use mock mode anymore, always use the real private key
     
     // Check if privateKeyString is a path to a file
     if (privateKeyString.startsWith('/') || privateKeyString.startsWith('./')) {

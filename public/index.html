@@ -1713,7 +1713,7 @@
                     <div class="metric-row">
                         <div class="metric-label">Milestone Burn Progress</div>
                         <div class="current-market-cap" id="current-marketcap">
-                            Current Market Cap: <strong>$350.0K</strong>
+                            Current Market Cap: <strong>Loading...</strong>
                         </div>
                     </div>
                     
@@ -2115,7 +2115,10 @@
         // Tab switching
         document.addEventListener('DOMContentLoaded', function() {
 
+            console.log("Page chargée, mise à jour des valeurs...");
+            updateDisplayValues();
             setupCopyAddress();
+            updateMarketCap();
             setupStepHover();
 
             getBurnAmount;
@@ -2282,6 +2285,104 @@
                     }, 1000);
                 });
             }
+
+
+            // Fonction pour mettre à jour le marketcap
+            async function updateMarketCap() {
+            try {
+                const response = await fetch('/api/metrics');
+                if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Received data from API:", data);
+                
+                // Vérifier si les données sont dans la structure appropriée
+                if (data.success && data.metrics && data.metrics.marketCap) {
+                // Structure attendue
+                const marketCap = data.metrics.marketCap;
+                updateMarketCapDisplay(marketCap);
+                } 
+                else if (data.marketCap) {
+                // Structure alternative
+                updateMarketCapDisplay(data.marketCap);
+                }
+                else {
+                // Fallback si aucune structure ne correspond
+                console.warn("Market cap data not found in expected structure:", data);
+                }
+            } catch (error) {
+                console.error('Error fetching market cap:', error);
+            }
+            }
+
+            async function updateDisplayValues() {
+                try {
+                    const response = await fetch('/api/metrics');
+                    if (!response.ok) {
+                    console.error(`API error: ${response.status}`);
+                    return;
+                    }
+
+                    const data = await response.json();
+                    console.log("============ DONNÉES REÇUES ============");
+                    console.log(data);
+                    
+                    // Mettre à jour le market cap
+                    const marketCapElement = document.getElementById('current-marketcap');
+                    if (marketCapElement) {
+                    const formattedMarketCap = formatCurrency(data.marketCap);
+                    console.log(`Mise à jour Market Cap: $${formattedMarketCap}`);
+                    marketCapElement.innerHTML = `Current Market Cap: <strong>$${formattedMarketCap}</strong>`;
+                    } else {
+                    console.error("Élément 'current-marketcap' introuvable!");
+                    }
+                    
+                    // Mettre à jour le total burned
+                    const totalBurnedElement = document.getElementById('total-burned');
+                    if (totalBurnedElement) {
+                    console.log(`Mise à jour Total Burned: ${data.totalBurned.toLocaleString()}`);
+                    totalBurnedElement.textContent = data.totalBurned.toLocaleString();
+                    } else {
+                    console.error("Élément 'total-burned' introuvable!");
+                    }
+                    
+                    // Mettre à jour la barre de progression
+                    const progressBar = document.getElementById('burn-progress');
+                    const percentageElement = document.getElementById('burn-percentage');
+                    
+                    if (progressBar && percentageElement) {
+                    console.log(`Mise à jour Burn Percentage: ${data.burnPercentage}%`);
+                    progressBar.style.width = `${data.burnPercentage}%`;
+                    percentageElement.textContent = `${data.burnPercentage}%`;
+                    } else {
+                    console.error("Éléments de la barre de progression introuvables!");
+                    }
+                    
+                    // Déboggage des éléments du DOM
+                    console.log("============ VÉRIFICATION DOM ============");
+                    console.log("Élément Market Cap:", document.getElementById('current-marketcap'));
+                    console.log("Élément Total Burned:", document.getElementById('total-burned'));
+                    console.log("Élément Progress Bar:", document.getElementById('burn-progress'));
+                    console.log("Élément Percentage:", document.getElementById('burn-percentage'));
+                    
+                } catch (error) {
+                    console.error('Error updating display values:', error);
+                }
+                }
+
+            // Fonction utilitaire pour mettre à jour l'affichage
+            function updateMarketCapDisplay(marketCap) {
+            const marketCapElement = document.getElementById('current-marketcap');
+            if (marketCapElement) {
+                const formattedMarketCap = formatCurrency(marketCap);
+                marketCapElement.innerHTML = `Current Market Cap: <strong>$${formattedMarketCap}</strong>`;
+                console.log(`Updated market cap display: $${formattedMarketCap}`);
+            } else {
+                console.warn("Market cap element not found in DOM");
+            }
+            }
             
             /**
              * Format currency value with K/M/B suffix
@@ -2297,6 +2398,7 @@
                     return value.toFixed(2);
                 }
             }
+            
 
             async function fetchTokenAddress() {
                 try {
@@ -2741,8 +2843,8 @@
                 }
             }
             
-            // Fetch real data from the API
-            getBurnAmount();
+            setInterval(updateMarketCap, 120000);
+            setInterval(updateDisplayValues, 120000);
             
             // Auto-refresh every 2 minutes
             setInterval(getBurnAmount, 120000);

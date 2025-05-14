@@ -168,15 +168,7 @@ const checkAvailableRewards = async () => {
     // 1. Query the program account for available rewards
     // 2. Return the amount of rewards available to claim
     
-    // For mock mode, return a simulated amount
-    if (process.env.MOCK_MODE === 'true') {
-      const mockAmount = (Math.random() * 0.5 + 0.1).toFixed(4);
-      return {
-        success: true,
-        availableAmount: parseFloat(mockAmount),
-        mockMode: true
-      };
-    }
+    // We no longer use mock mode, always check real rewards
     
     // Get keypair
     const keypair = solana.createKeypair();

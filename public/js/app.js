@@ -508,6 +508,8 @@ function updateBurnMetrics(data, animate = false) {
         return;
     }
     
+    // Get total burned from the metrics data
+    // This now comes directly from burnTracker.getTotalBurned() on the backend
     const totalBurned = data.totalBurned || 0;
     const initialSupply = 1000000000; // 1 billion
     const burnPercentage = ((totalBurned / initialSupply) * 100).toFixed(2);

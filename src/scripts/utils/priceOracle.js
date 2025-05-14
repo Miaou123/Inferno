@@ -12,18 +12,18 @@ require('dotenv').config();
 // Cache duration in milliseconds (15 minutes)
 const CACHE_DURATION_MS = 15 * 60 * 1000;
 
-// Store data in memory cache 
+// Store data in memory cache
 let priceCache = {
   lastUpdated: null,
   tokenPriceInSol: null,
   tokenPriceInUsd: null,
   solPriceInUsd: null,
-  source: null,
+  source: 'birdeye',  // Only using Birdeye as source
   marketCap: null
 };
 
 /**
- * Fetch token price from Birdeye API with fallback
+ * Fetch token price from Birdeye API (no fallback)
  * @returns {Promise<Object>} Price data
  */
 const fetchTokenPrice = async () => {
@@ -42,44 +42,12 @@ const fetchTokenPrice = async () => {
     
     logger.info('Fetching fresh token price data');
     
-    // In mock mode, return synthetic data
-    if (process.env.MOCK_MODE === 'true') {
-      const mockData = getMockPriceData();
-      updateCache(mockData, 'mock');
-      return mockData;
-    }
+    // Use ONLY Birdeye API - no fallbacks, no mocks
+    const birdeyeData = await fetchFromBirdeye();
+    updateCache(birdeyeData, 'birdeye');
     
-    // Try primary source (Birdeye)
-    try {
-      const birdeyeData = await fetchFromBirdeye();
-      updateCache(birdeyeData, 'birdeye');
-      
-      // Skip saving price history as requested by user
-      return birdeyeData;
-    } catch (birdeyeError) {
-      logger.warn(`Birdeye fetch failed: ${birdeyeError.message}, trying fallback source`);
-      
-      // Try fallback source (Jupiter etc.)
-      try {
-        const fallbackData = await fetchFromFallbackSource();
-        updateCache(fallbackData, 'fallback');
-        
-        // Skip saving price history as requested by user
-        return fallbackData;
-      } catch (fallbackError) {
-        logger.error(`Fallback price fetch failed: ${fallbackError.message}`);
-        
-        // If all fails, use the last valid cached data if available
-        if (priceCache.lastUpdated) {
-          logger.warn('Using stale cached price data as all sources failed');
-          priceCache.source = 'stale-cache';
-          return priceCache;
-        }
-        
-        // If no cache, return error
-        throw new Error('All price sources failed');
-      }
-    }
+    // Return real data from Birdeye only
+    return birdeyeData;
   } catch (error) {
     logger.error(`Error fetching token price: ${error.message}`);
     throw error;
@@ -161,17 +129,28 @@ const fetchFromBirdeye = async () => {
     // Calculate derived values
     const tokenPriceInSol = tokenData.value;
     const solPriceInUsd = solData.value;
+    
+    // Calculate market cap (SOL amount) then convert to USD
+    const fixedSupply = 1000000000; // 1 billion tokens
+    const marketCapInSol = tokenPriceInSol * fixedSupply;
+    const marketCap = marketCapInSol * solPriceInUsd;
+    
+    // Calculate token price in USD
     const tokenPriceInUsd = tokenPriceInSol * solPriceInUsd;
     
-    // Get circulating supply for market cap calculation
-    const circulatingSupply = await getCirculatingSupply();
-    const marketCap = tokenPriceInUsd * circulatingSupply;
+    // Log real data directly from Birdeye
+    logger.info(`REAL DATA from Birdeye:
+      - Token: ${tokenAddress}
+      - Price: ${tokenPriceInSol}
+      - Market Cap: ${marketCapInSol} SOL
+    `);
     
     return {
       tokenPriceInSol,
       tokenPriceInUsd,
       solPriceInUsd,
-      marketCap
+      marketCap,
+      marketCapInSol
     };
   } catch (error) {
     logger.error(`Error fetching from Birdeye: ${error.message}`);
@@ -179,57 +158,7 @@ const fetchFromBirdeye = async () => {
   }
 };
 
-/**
- * Fetch price data from fallback source
- * @returns {Promise<Object>} Price data
- */
-const fetchFromFallbackSource = async () => {
-  // Implement fallback price source
-  // This could be Jupiter, CoinGecko, or another API
-  
-  // For now, we'll use simple mock data
-  // In a real implementation, this would connect to a different API
-  logger.info('Using fallback price source');
-  
-  try {
-    // Since we're not saving price history, let's skip this check
-    // and just use mock data directly
-    logger.info('Skipping price history check - using mock data directly');
-    const priceHistory = [];
-    
-    if (priceHistory.length > 0) {
-      const latestPrice = priceHistory[0];
-      logger.info(`Using recent price history as fallback from: ${latestPrice.timestamp}`);
-      
-      return {
-        tokenPriceInSol: latestPrice.tokenPriceInSol,
-        tokenPriceInUsd: latestPrice.tokenPriceInUsd,
-        solPriceInUsd: latestPrice.solPriceInUsd,
-        marketCap: latestPrice.marketCap
-      };
-    }
-    
-    // If no history, use mock data with warning
-    logger.warn('No price history available, using mock fallback data');
-    return getMockPriceData();
-  } catch (error) {
-    logger.error(`Error in fallback price source: ${error.message}`);
-    throw error;
-  }
-};
-
-/**
- * Get mock price data for testing
- * @returns {Object} Mock price data
- */
-const getMockPriceData = () => {
-  return {
-    tokenPriceInSol: 0.0000005,
-    solPriceInUsd: 100,
-    tokenPriceInUsd: 0.0000005 * 100,
-    marketCap: 0.0000005 * 100 * 700000000 // Assuming 70% of supply is circulating
-  };
-};
+// No fallback sources - we only use real Birdeye data
 
 /**
  * Save price data to history
@@ -242,220 +171,64 @@ const savePriceHistory = (priceData, source) => {
   return;
 };
 
-/**
- * Get current token market cap
+/**Get current token market cap - Birdeye price × supply
  * @returns {Promise<Number>} Market cap in USD
  */
 const getMarketCap = async () => {
   try {
-    // Get price data
+    // Get price data from Birdeye API
     const priceData = await fetchTokenPrice();
     
-    // If we have market cap directly, use it
-    if (priceData.marketCap) {
-      return priceData.marketCap;
-    }
+    // Calculate market cap using total supply
+    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+    const marketCap = priceData.tokenPriceInSol * initialSupply;
     
-    // Otherwise calculate from circulating supply
-    const circulatingSupply = await getCirculatingSupply();
-    return priceData.tokenPriceInUsd * circulatingSupply;
+    logger.info(`Calculated market cap: $${marketCap.toFixed(2)} (price: $${priceData.tokenPriceInSol} × supply: ${initialSupply})`);
+    return marketCap;
   } catch (error) {
     logger.error(`Error calculating market cap: ${error.message}`);
-    
-    // Fallback to stored metrics
-    try {
-      const metrics = fileStorage.findRecords('metrics', () => true, {
-        sort: { field: 'timestamp', order: 'desc' },
-        limit: 1
-      });
-      
-      if (metrics.length > 0 && metrics[0].marketCap) {
-        logger.info('Using market cap from stored metrics as fallback');
-        return metrics[0].marketCap;
-      }
-    } catch (storageError) {
-      logger.error(`Error getting market cap from storage: ${storageError.message}`);
-    }
-    
     throw error;
   }
 };
 
 /**
- * Get token supply information directly from the blockchain
- * @returns {Promise<Object>} Supply information
+ * Simple function to get circulating supply
+ * Uses a fixed value for simplicity since we're tracking burns separately
+ * @returns {Number} Circulating supply
  */
-const getTokenSupplyFromChain = async () => {
-  try {
-    const connection = new Connection(process.env.SOLANA_RPC_URL);
-    const tokenMint = new PublicKey(process.env.TOKEN_ADDRESS);
-    
-    // Get token supply from chain
-    const tokenSupplyInfo = await connection.getTokenSupply(tokenMint);
-    
-    // Get burn address balance
-    const burnAddress = new PublicKey(process.env.BURN_ADDRESS || "1nc1nerator11111111111111111111111111111111");
-    const burnAccounts = await connection.getTokenAccountsByOwner(burnAddress, { mint: tokenMint });
-    
-    let burnedAmount = 0;
-    if (burnAccounts.value.length > 0) {
-      for (const account of burnAccounts.value) {
-        const accountInfo = await connection.getTokenAccountBalance(account.pubkey);
-        burnedAmount += accountInfo.value.uiAmount;
-      }
-    }
-    
-    // Log what we found
-    logger.info(`On-chain token data: 
-      - Total Supply: ${tokenSupplyInfo.value.uiAmount}
-      - Decimals: ${tokenSupplyInfo.value.decimals}
-      - Burned (in burn address): ${burnedAmount}
-    `);
-    
-    return {
-      totalSupply: tokenSupplyInfo.value.uiAmount,
-      circulatingSupply: tokenSupplyInfo.value.uiAmount - burnedAmount,
-      burnedAmount: burnedAmount
-    };
-  } catch (error) {
-    logger.error(`Error getting token supply from chain: ${error.message}`);
-    throw error;
-  }
+const getCirculatingSupply = () => {
+  // We now track burns separately in burnTracker
+  // This is just returning the initial supply as it's only used for market cap calculation
+  const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+  return initialSupply;
 };
 
 /**
- * Get current circulating supply
- * @returns {Promise<Number>} Circulating supply
- */
-const getCirculatingSupply = async () => {
-  try {
-    // Try to get actual on-chain data first
-    try {
-      const onChainData = await getTokenSupplyFromChain();
-      logger.info(`Using on-chain circulating supply: ${onChainData.circulatingSupply}`);
-      return onChainData.circulatingSupply;
-    } catch (chainError) {
-      logger.warn(`Couldn't get on-chain supply data: ${chainError.message}, falling back to records`);
-    }
-    
-    // If on-chain fails, try calculating from burn records
-    try {
-      const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-      const burns = fileStorage.readData(fileStorage.FILES.burns);
-      const totalBurned = burns.reduce((sum, burn) => sum + (burn.burnAmount || 0), 0);
-      
-      logger.info(`Calculated from burn records: Supply ${initialSupply}, Burns ${totalBurned}, Circulating ${initialSupply - totalBurned}`);
-      return initialSupply - totalBurned;
-    } catch (recordError) {
-      logger.warn(`Couldn't calculate from burn records: ${recordError.message}, falling back to metrics`);
-    }
-    
-    // If that fails too, use stored metrics (last resort)
-    const metrics = fileStorage.findRecords('metrics', () => true, {
-      sort: { field: 'timestamp', order: 'desc' },
-      limit: 1
-    });
-    
-    if (metrics.length > 0) {
-      logger.info(`Using stored metrics for circulating supply: ${metrics[0].circulatingSupply}`);
-      return metrics[0].circulatingSupply;
-    }
-    
-    // Ultimate fallback
-    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-    logger.warn(`All methods failed, using default 70% of supply: ${initialSupply * 0.7}`);
-    return initialSupply * 0.7;
-  } catch (error) {
-    logger.error(`Error calculating circulating supply: ${error.message}`);
-    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-    return initialSupply * 0.7;
-  }
-};
-
-/**
- * Update metrics with accurate on-chain data
- */
-const updateMetricsFromChain = async () => {
-  try {
-    // Get on-chain data
-    const onChainData = await getTokenSupplyFromChain();
-    
-    // Get the latest metrics
-    const metrics = fileStorage.findRecords('metrics', () => true, {
-      sort: { field: 'timestamp', order: 'desc' },
-      limit: 1
-    });
-    
-    // Create updated metrics
-    const updatedMetrics = {
-      timestamp: new Date().toISOString(),
-      totalSupply: onChainData.totalSupply,
-      circulatingSupply: onChainData.circulatingSupply,
-      reserveWalletBalance: metrics.length > 0 ? metrics[0].reserveWalletBalance : 0,
-      totalBurned: onChainData.burnedAmount,
-      buybackBurned: metrics.length > 0 ? metrics[0].buybackBurned : 0,
-      milestoneBurned: metrics.length > 0 ? metrics[0].milestoneBurned : 0,
-      updatedFromChain: true
-    };
-    
-    // Save the updated metrics
-    fileStorage.saveRecord('metrics', updatedMetrics);
-    logger.info(`Updated metrics from chain data: Total Supply ${onChainData.totalSupply}, Circulating ${onChainData.circulatingSupply}, Burned ${onChainData.burnedAmount}`);
-    
-    return updatedMetrics;
-  } catch (error) {
-    logger.error(`Error updating metrics from chain: ${error.message}`);
-    throw error;
-  }
-};
-
-/**
- * Get complete token metrics
- * @returns {Promise<Object>} Token metrics
+ * Get simple price metrics - ONLY price data, nothing else
+ * @returns {Promise<Object>} Price metrics
  */
 const getTokenMetrics = async () => {
   try {
-    // Get latest metrics from storage
-    const metrics = fileStorage.findRecords('metrics', () => true, {
-      sort: { field: 'timestamp', order: 'desc' },
-      limit: 1
-    });
-    
-    let latestMetrics = metrics.length > 0 ? metrics[0] : null;
-    
-    // Get fresh price data
+    // Get fresh price data from Birdeye
     const priceData = await fetchTokenPrice();
     
-    // If we don't have metrics, create a baseline
-    if (!latestMetrics) {
-      const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-      const reservePercent = 0.3;
-      
-      latestMetrics = {
-        totalSupply: initialSupply,
-        circulatingSupply: initialSupply * (1 - reservePercent),
-        reserveWalletBalance: initialSupply * reservePercent,
-        totalBurned: 0,
-        buybackBurned: 0,
-        milestoneBurned: 0
-      };
-    }
+    // Calculate market cap from fixed supply
+    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+    const marketCap = priceData.tokenPriceInUsd * initialSupply;
     
-    // Update metrics with price data
-    const updatedMetrics = {
-      ...latestMetrics,
+    // Create simple price metrics response
+    const priceMetrics = {
       priceInSol: priceData.tokenPriceInSol,
       priceInUsd: priceData.tokenPriceInUsd,
       solPriceInUsd: priceData.solPriceInUsd,
-      marketCap: priceData.tokenPriceInUsd * latestMetrics.circulatingSupply,
+      marketCap: marketCap,
       timestamp: new Date().toISOString(),
-      priceLastUpdated: priceData.timestamp || new Date().toISOString(),
       priceSource: priceData.source
     };
     
-    return updatedMetrics;
+    return priceMetrics;
   } catch (error) {
-    logger.error(`Error getting token metrics: ${error.message}`);
+    logger.error(`Error getting token price metrics: ${error.message}`);
     throw error;
   }
 };
@@ -466,4 +239,5 @@ module.exports = {
   getMarketCap,
   getCirculatingSupply,
   getTokenMetrics
+  // updateMetricsFromChain has been removed as we're now using burnTracker
 };

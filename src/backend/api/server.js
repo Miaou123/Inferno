@@ -10,7 +10,7 @@ const { getMarketCap, getCirculatingSupply, fetchTokenPrice, getTokenMetrics } =
 const { checkMilestones } = require('../../scripts/milestone');
 const logger = require('../../scripts/utils/logger').api;
 const fileStorage = require('../../scripts/utils/fileStorage');
-const { calculateBurnAmount } = require('../../scripts/utils/calculateBurnAmount');
+const burnTracker = require('../../scripts/utils/burnTracker');
 require('dotenv').config();
 
 // Initialize Express app
@@ -37,18 +37,28 @@ const initializeServer = async () => {
   }
 };
 
+// Simple API endpoint for burn calculation
 app.get('/api/calculate-burn', async (req, res) => {
   try {
-    const burnData = await calculateBurnAmount();
+    // Get total supply from env
+    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
     
-    if (burnData.success) {
-      res.json(burnData);
-    } else {
-      res.status(500).json({
-        error: burnData.error,
-        success: false
-      });
-    }
+    // Get total burned amount directly from burnTracker
+    const burnedAmount = burnTracker.getTotalBurned();
+    
+    // Calculate circulating supply
+    const circulatingSupply = initialSupply - burnedAmount;
+    
+    // Calculate burn percentage
+    const burnPercentage = (burnedAmount / initialSupply * 100).toFixed(2);
+    
+    res.json({
+      initialSupply,
+      circulatingSupply,
+      burnAmount: burnedAmount,
+      burnPercentage: parseFloat(burnPercentage),
+      success: true
+    });
   } catch (error) {
     console.error("Error in burn calculation endpoint:", error);
     res.status(500).json({
@@ -58,7 +68,6 @@ app.get('/api/calculate-burn', async (req, res) => {
   }
 });
 
-// Define API routes
 app.get('/api/metrics', async (req, res) => {
   try {
     // Get latest metrics from storage
@@ -68,89 +77,86 @@ app.get('/api/metrics', async (req, res) => {
     });
     
     const latestMetrics = metrics[0];
-    console.log("Latest metrics from storage:", latestMetrics);
     
-    // Get burn records
+    // Calculer le market cap
+    const marketCap = await getMarketCap();
+    
+    // Obtenir les données de burn
     const burns = fileStorage.readData(fileStorage.FILES.burns);
-    const totalBurnedFromRecords = burns.reduce((sum, burn) => sum + (burn.burnAmount || 0), 0);
+    const totalBurned = burns.reduce((sum, burn) => sum + (burn.burnAmount || 0), 0);
     
-    console.log("Total burned from records:", totalBurnedFromRecords);
+    // Obtenir les milestones complétés
+    const milestones = fileStorage.readData(fileStorage.FILES.milestones);
+    const completedMilestones = milestones.filter(m => m.completed).length;
     
-    // Ensure we have some valid metrics
-    if (!latestMetrics || latestMetrics.totalBurned === 0 && totalBurnedFromRecords > 0) {
-      // Try to get up-to-date on-chain data
-      try {
-        const { updateMetricsFromChain } = require('../../scripts/utils/priceOracle');
-        const updatedMetrics = await updateMetricsFromChain();
-        
-        return res.json({
-          ...updatedMetrics,
-          tokenAddress: process.env.TOKEN_ADDRESS,
-          lastUpdated: updatedMetrics.timestamp
-        });
-      } catch (chainError) {
-        console.log("Couldn't get chain data, using fallback calculation");
-        
-        // Fallback calculation based on burn records
-        const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-        
-        return res.json({
-          totalSupply: initialSupply,
-          circulatingSupply: initialSupply - totalBurnedFromRecords,
-          reserveWalletBalance: 0, // No reserve if we're using fallback
-          totalBurned: totalBurnedFromRecords,
-          buybackBurned: burns.filter(b => b.burnType === 'automated' || b.burnType === 'buyback')
-                          .reduce((sum, b) => sum + (b.burnAmount || 0), 0),
-          milestoneBurned: burns.filter(b => b.burnType === 'milestone')
-                            .reduce((sum, b) => sum + (b.burnAmount || 0), 0),
-          tokenAddress: process.env.TOKEN_ADDRESS,
-          lastUpdated: new Date().toISOString(),
-          calculationMethod: "burn_records_fallback"
-        });
-      }
-    }
+    // Log toutes les valeurs importantes
+    console.log("============ VALEURS DU SITE ============");
+    console.log(`Market Cap: $${marketCap.toLocaleString()}`);
+    console.log(`Total Burned: ${totalBurned.toLocaleString()} tokens`);
+    console.log(`Burn Percentage: ${((totalBurned / 1000000000) * 100).toFixed(2)}%`);
+    console.log(`Completed Milestones: ${completedMilestones} of ${milestones.length}`);
     
-    // Return metrics, ensuring totalBurned is properly set
-    const responseMetrics = {
-      ...latestMetrics,
-      totalBurned: Math.max(latestMetrics.totalBurned || 0, totalBurnedFromRecords),
-      tokenAddress: process.env.TOKEN_ADDRESS,
-      lastUpdated: latestMetrics.timestamp
+    // Log des différentes collections
+    console.log(`Nombre total de burns: ${burns.length}`);
+    console.log(`Nombre total de metrics: ${metrics.length}`);
+    console.log(`Nombre total de milestones: ${milestones.length}`);
+    
+    // Construire la réponse
+    const responseData = {
+      marketCap: marketCap,
+      totalBurned: totalBurned,
+      burnPercentage: ((totalBurned / 1000000000) * 100).toFixed(2),
+      completedMilestones: completedMilestones,
+      totalMilestones: milestones.length
     };
     
-    console.log("Sending metrics with totalBurned:", responseMetrics.totalBurned);
-    res.json(responseMetrics);
+    if (latestMetrics) {
+      responseData.metrics = latestMetrics;
+    }
+    
+    // Log de la réponse complète
+    console.log("============ RÉPONSE API ============");
+    console.log(JSON.stringify(responseData, null, 2));
+    
+    res.json({
+      success: true,
+      ...responseData
+    });
   } catch (error) {
-    logger.error(`Error fetching metrics: ${error}`);
-    res.status(500).json({ error: 'Failed to fetch metrics' });
+    console.error(`Error fetching metrics: ${error}`);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch metrics' 
+    });
   }
 });
 
-pp.get('/api/simple-burn', async (req, res) => {
+// Note: This endpoint is deprecated - using burnTracker.getTotalBurned() is the preferred method
+app.get('/api/simple-burn', async (req, res) => {
   try {
-    // Hardcoded initial supply
-    const initialSupply = 1000000000;
+    // Get total supply from env
+    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
     
-    // Use the circulating supply you provided
-    const circulatingSupply = 891610397.89;
+    // Get total burned from burnTracker
+    const totalBurned = burnTracker.getTotalBurned();
     
-    // Calculate burn amount
-    const burnAmount = initialSupply - circulatingSupply;
+    // Calculate circulating supply
+    const circulatingSupply = initialSupply - totalBurned;
     
     // Calculate percentage
-    const burnPercentage = (burnAmount / initialSupply * 100).toFixed(2);
+    const burnPercentage = (totalBurned / initialSupply * 100).toFixed(2);
     
-    console.log("Simple burn calculation:");
+    console.log("Simple burn calculation from burnTracker:");
     console.log("- Initial Supply:", initialSupply);
     console.log("- Circulating Supply:", circulatingSupply);
-    console.log("- Burn Amount:", burnAmount);
+    console.log("- Burn Amount:", totalBurned);
     console.log("- Burn Percentage:", burnPercentage + "%");
     
     res.json({
       initialSupply,
       circulatingSupply,
-      burnAmount,
-      burnPercentage,
+      burnAmount: totalBurned,
+      burnPercentage: parseFloat(burnPercentage),
       success: true
     });
   } catch (error) {
@@ -162,73 +168,86 @@ pp.get('/api/simple-burn', async (req, res) => {
   }
 });
 
-// Add an endpoint to update metrics from the blockchain
+// Endpoint to update metrics based on burn records
 app.get('/api/update-metrics', async (req, res) => {
   try {
-    // Import the functions
-    const { updateMetricsFromChain } = require('../../scripts/utils/priceOracle');
+    // Get total burned amount and burns by type from burnTracker
+    const totalBurned = burnTracker.getTotalBurned();
+    const burnsByType = burnTracker.getBurnsByType();
     
-    // Get the updated metrics
-    const updatedMetrics = await updateMetricsFromChain();
+    // Get initial supply
+    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+    
+    // Calculate circulating supply
+    const circulatingSupply = initialSupply - totalBurned;
+    
+    // Create updated metrics
+    const updatedMetrics = {
+      timestamp: new Date().toISOString(),
+      totalSupply: initialSupply,
+      circulatingSupply: circulatingSupply,
+      totalBurned: totalBurned,
+      buybackBurned: burnsByType.automated,
+      milestoneBurned: burnsByType.milestone
+    };
+    
+    // Save the updated metrics
+    fileStorage.saveRecord('metrics', updatedMetrics);
     
     res.json({
       success: true,
-      message: 'Metrics updated from blockchain data',
+      message: 'Metrics updated from burn records',
       metrics: updatedMetrics
     });
   } catch (error) {
-    console.error('Error updating metrics from chain:', error);
+    console.error('Error updating metrics:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to update metrics from chain',
+      error: 'Failed to update metrics',
       message: error.message
     });
   }
 });
 
-// Add a dedicated endpoint for burn statistics
+// Add a dedicated endpoint for burn statistics by type
+// Ajouter ceci à src/backend/api/server.js
+
+// Endpoint pour les statistiques complètes de burn
 app.get('/api/burn-stats', (req, res) => {
   try {
-    // Get initial supply from env
-    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+    logger.debug('[API] Fetching comprehensive burn stats');
     
-    // Get latest metrics from storage
-    const metrics = fileStorage.findRecords('metrics', () => true, { 
-      sort: { field: 'timestamp', order: 'desc' }, 
-      limit: 1 
-    });
+    // Obtenir les statistiques complètes
+    const stats = burnTracker.getBurnStats();
     
-    // Get burns from storage
-    const burns = fileStorage.readData(fileStorage.FILES.burns);
+    // Ajouter des données de contexte pour le débogage
+    const debugContext = {
+      env: {
+        TOKEN_ADDRESS: process.env.TOKEN_ADDRESS,
+        INITIAL_SUPPLY: process.env.INITIAL_SUPPLY,
+        NODE_ENV: process.env.NODE_ENV
+      },
+      storageStatus: {
+        burns: fileStorage.readData(fileStorage.FILES.burns).length,
+        metrics: fileStorage.readData(fileStorage.FILES.metrics).length,
+        milestones: fileStorage.readData(fileStorage.FILES.milestones).length
+      },
+      timestamp: new Date().toISOString()
+    };
     
-    // Calculate total burned from burns collection
-    const burnedFromRecords = burns.reduce((total, burn) => total + (burn.burnAmount || 0), 0);
+    logger.debug(`[API] Burn stats context: ${JSON.stringify(debugContext)}`);
     
-    // Get circulating supply from metrics or calculate
-    const circulatingSupply = metrics[0]?.circulatingSupply || (initialSupply - burnedFromRecords);
-    
-    // Calculate burned amount (two ways)
-    const burnedFromSupply = initialSupply - circulatingSupply;
-    
-    console.log("Burn stats calculation:");
-    console.log("- Initial Supply:", initialSupply);
-    console.log("- Circulating Supply:", circulatingSupply);
-    console.log("- Burned (from supply):", burnedFromSupply);
-    console.log("- Burned (from records):", burnedFromRecords);
-    
-    return res.json({
-      initialSupply,
-      circulatingSupply,
-      totalBurned: burnedFromSupply,
-      totalBurnedFromRecords: burnedFromRecords,
-      burnPercentage: (burnedFromSupply / initialSupply * 100).toFixed(2),
-      success: true
+    res.json({
+      success: true,
+      burnStats: stats,
+      debug: debugContext
     });
   } catch (error) {
-    console.error("Error getting burn stats:", error);
-    return res.status(500).json({
-      error: "Failed to calculate burn statistics",
-      success: false
+    logger.error(`[API] Error getting burn stats: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get burn stats',
+      errorDetails: error.message
     });
   }
 });
