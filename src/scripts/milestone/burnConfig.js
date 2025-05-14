@@ -4,25 +4,15 @@
  */
 
 const BURN_SCHEDULE = [
-  { marketCap: 100000, burnAmount: 50000000, percentOfSupply: 5.00 },
-  { marketCap: 200000, burnAmount: 25000000, percentOfSupply: 2.50 },
-  { marketCap: 300000, burnAmount: 20000000, percentOfSupply: 2.00 },
-  { marketCap: 500000, burnAmount: 20000000, percentOfSupply: 2.00 },
-  { marketCap: 750000, burnAmount: 15000000, percentOfSupply: 1.50 },
-  { marketCap: 1000000, burnAmount: 15000000, percentOfSupply: 1.50 },
-  { marketCap: 1500000, burnAmount: 12500000, percentOfSupply: 1.25 },
-  { marketCap: 2500000, burnAmount: 12500000, percentOfSupply: 1.25 },
-  { marketCap: 3500000, burnAmount: 10000000, percentOfSupply: 1.00 },
-  { marketCap: 5000000, burnAmount: 10000000, percentOfSupply: 1.00 },
-  { marketCap: 7500000, burnAmount: 10000000, percentOfSupply: 1.00 },
-  { marketCap: 10000000, burnAmount: 10000000, percentOfSupply: 1.00 },
-  { marketCap: 15000000, burnAmount: 7500000, percentOfSupply: 0.75 },
-  { marketCap: 25000000, burnAmount: 7500000, percentOfSupply: 0.75 },
-  { marketCap: 35000000, burnAmount: 5000000, percentOfSupply: 0.50 },
-  { marketCap: 50000000, burnAmount: 5000000, percentOfSupply: 0.50 },
-  { marketCap: 75000000, burnAmount: 7500000, percentOfSupply: 0.75 },
-  { marketCap: 90000000, burnAmount: 7500000, percentOfSupply: 0.75 },
-  { marketCap: 100000000, burnAmount: 50000000, percentOfSupply: 5.00 }
+  { marketCap: 6000, burnAmount: 10000000, percentOfSupply: 1.00 },
+  { marketCap: 6200, burnAmount: 10000000, percentOfSupply: 1.00 },
+  { marketCap: 6500, burnAmount: 10000000, percentOfSupply: 1.00 },
+  { marketCap: 7000, burnAmount: 15000000, percentOfSupply: 1.50 },
+  { marketCap: 7500, burnAmount: 15000000, percentOfSupply: 1.50 },
+  { marketCap: 8000, burnAmount: 20000000, percentOfSupply: 2.00 },
+  { marketCap: 9000, burnAmount: 20000000, percentOfSupply: 2.00 },
+  { marketCap: 10000, burnAmount: 25000000, percentOfSupply: 2.50 },
+  { marketCap: 12000, burnAmount: 25000000, percentOfSupply: 2.50 }
 ];
 
 // Calculate cumulative percentages for reference

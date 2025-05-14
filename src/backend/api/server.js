@@ -299,14 +299,25 @@ app.get('/api/burns', async (req, res) => {
 });
 
 // Get milestone status
+// Get milestone status
 app.get('/api/milestones', async (req, res) => {
   try {
+    console.log("==== API DEBUG: /api/milestones ====");
     // Get all milestones
     const milestones = fileStorage.readData(fileStorage.FILES.milestones);
+    console.log(`Found ${milestones.length} milestones in storage`);
     milestones.sort((a, b) => a.marketCap - b.marketCap);
     
     // Get current market cap
     const currentMarketCap = await getMarketCap();
+    console.log(`Current market cap: ${currentMarketCap}`);
+    
+    // Calculate burn totals
+    const completedMilestones = milestones.filter(m => m.completed);
+    console.log(`Completed milestones: ${completedMilestones.length}`);
+    
+    const totalMilestoneBurned = completedMilestones.reduce((sum, m) => sum + (m.burnAmount || 0), 0);
+    console.log(`Total milestone burned: ${totalMilestoneBurned.toLocaleString()} tokens`);
     
     // Enhance with progress information
     const enhancedMilestones = milestones.map(milestone => {
@@ -316,25 +327,31 @@ app.get('/api/milestones', async (req, res) => {
       return {
         ...milestone,
         isEligible,
-        isPending,
-        currentMarketCap
+        isPending
       };
     });
     
     // Find next milestone
     const nextMilestone = enhancedMilestones.find(m => !m.completed);
+    console.log("Next milestone:", nextMilestone ? nextMilestone.marketCap : "none");
     
-    res.json({
+    // Create response object with all required data
+    const responseData = {
       milestones: enhancedMilestones,
       currentMarketCap,
+      totalMilestoneBurned,
+      burnPercentage: ((totalMilestoneBurned / 1000000000) * 100).toFixed(2),
       progress: {
-        completedCount: milestones.filter(m => m.completed).length,
+        completedCount: completedMilestones.length,
         totalCount: milestones.length,
         nextMilestone
       }
-    });
+    };
+    
+    console.log("Sending milestone response data");
+    res.json(responseData);
   } catch (error) {
-    logger.error(`Error fetching milestones: ${error}`);
+    console.error(`Error fetching milestones: ${error}`);
     res.status(500).json({ error: 'Failed to fetch milestone status' });
   }
 });

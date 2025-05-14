@@ -1880,20 +1880,20 @@
                     <div class="burn-stats-grid">
                         <div class="stat-card">
                             <div class="stat-label">Milestones Completed</div>
-                            <div class="stat-value">3 of 19</div>
+                            <div class="stat-value">loading...</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Milestone Tokens Burned</div>
-                            <div class="stat-value">95,000,000</div>
+                            <div class="stat-value">loading...</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Supply Burned via Milestones</div>
-                            <div class="stat-value">9.50%</div>
+                            <div class="stat-value">loading...</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-label">Next Milestone</div>
-                            <div class="stat-value highlight">$500K</div>
-                            <div class="stat-sub">2.00% Burn (20,000,000 tokens)</div>
+                            <div class="stat-value highlight">loading...</div>
+                            <div class="stat-sub">loading...</div>
                         </div>
                     </div>
                 </div>
@@ -2465,6 +2465,111 @@
                     return null;
                 }
                 }
+
+                async function fetchAndUpdateMilestones() {
+                    try {
+                        const response = await fetch('/api/milestones');
+                        
+                        if (!response.ok) {
+                            throw new Error(`API error: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('Milestones data:', data);
+                        
+                        // Update milestones UI
+                        updateMilestonesUI(data);
+                        
+                        // Update milestone ladder visualization
+                        updateMilestoneLadder(data);
+                        
+                        return data;
+                    } catch (error) {
+                        console.error('Error fetching milestones:', error);
+                        throw error;
+                    }
+                }
+
+                // This function updates the milestone stats cards
+                    function updateMilestonesUI(data) {
+                        console.log('Updating milestone UI with data:', data);
+                        
+                        if (!data || !data.milestones) {
+                            console.error('Missing required milestone data');
+                            return;
+                        }
+                        
+                        // Update current market cap display
+                        const marketCapElement = document.getElementById('current-marketcap');
+                        if (marketCapElement && data.currentMarketCap) {
+                            const formattedMarketCap = formatCurrency(data.currentMarketCap);
+                            console.log(`Setting market cap display: $${formattedMarketCap}`);
+                            marketCapElement.innerHTML = `Current Market Cap: <strong>$${formattedMarketCap}</strong>`;
+                        }
+                        
+                        // Get milestone stats from API data
+                        const completedMilestones = data.milestones.filter(m => m.completed);
+                        const completedCount = completedMilestones.length;
+                        const totalCount = data.milestones.length;
+                        
+                        console.log(`Milestones completed: ${completedCount} of ${totalCount}`);
+                        
+                        // Set "Milestones Completed" card
+                        const completedCountElement = document.querySelector('.milestone-burns .stat-card:nth-child(1) .stat-value');
+                        if (completedCountElement) {
+                            completedCountElement.textContent = `${completedCount} of ${totalCount}`;
+                            console.log(`Updated milestones completed: ${completedCount} of ${totalCount}`);
+                        }
+                        
+                        // Calculate total tokens burned through milestones
+                        const totalMilestoneBurned = data.totalMilestoneBurned || 
+                            completedMilestones.reduce((sum, m) => sum + (m.burnAmount || 0), 0);
+                        
+                        console.log(`Total milestone burned: ${totalMilestoneBurned.toLocaleString()} tokens`);
+                        
+                        // Set "Milestone Tokens Burned" card
+                        const milestoneBurnElement = document.querySelector('.milestone-burns .stat-card:nth-child(2) .stat-value');
+                        if (milestoneBurnElement) {
+                            milestoneBurnElement.textContent = totalMilestoneBurned.toLocaleString();
+                            console.log(`Updated milestone tokens burned: ${totalMilestoneBurned.toLocaleString()}`);
+                        }
+                        
+                        // Calculate percentage of supply burned
+                        const initialSupply = 1000000000; // 1 billion
+                        const burnPercentage = data.burnPercentage || ((totalMilestoneBurned / initialSupply) * 100).toFixed(2);
+                        
+                        console.log(`Burn percentage: ${burnPercentage}%`);
+                        
+                        // Set "Supply Burned via Milestones" card
+                        const burnPercentageElement = document.querySelector('.milestone-burns .stat-card:nth-child(3) .stat-value');
+                        if (burnPercentageElement) {
+                            burnPercentageElement.textContent = `${burnPercentage}%`;
+                            console.log(`Updated supply burned percentage: ${burnPercentage}%`);
+                        }
+                        
+                        // Find next milestone to complete
+                        const nextMilestone = data.progress?.nextMilestone || 
+                            data.milestones.find(m => !m.completed);
+                        
+                        if (nextMilestone) {
+                            console.log(`Next milestone: $${nextMilestone.marketCap.toLocaleString()}`);
+                            
+                            // Set "Next Milestone" card
+                            const nextMilestoneElement = document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-value');
+                            const nextMilestoneSubElement = document.querySelector('.milestone-burns .stat-card:nth-child(4) .stat-sub');
+                            
+                            if (nextMilestoneElement) {
+                                const formattedMcap = formatCurrency(nextMilestone.marketCap);
+                                nextMilestoneElement.textContent = `$${formattedMcap}`;
+                                console.log(`Updated next milestone: $${formattedMcap}`);
+                            }
+                            
+                            if (nextMilestoneSubElement) {
+                                nextMilestoneSubElement.textContent = `${nextMilestone.percentOfSupply.toFixed(2)}% Burn (${nextMilestone.burnAmount.toLocaleString()} tokens)`;
+                                console.log(`Updated next milestone details: ${nextMilestone.percentOfSupply.toFixed(2)}% (${nextMilestone.burnAmount.toLocaleString()} tokens)`);
+                            }
+                        }
+                    }
 
 
             // Add this function to update UI with token address
