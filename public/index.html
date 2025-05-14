@@ -1664,7 +1664,7 @@
             <!-- Contract Address Display -->
             <div class="contract-display">
                 <div class="contract-address">
-                    <span id="contract-address">HJZn2a3YK1LTBCRDsX92cTtmXw6puh88JbZMGpEinfr</span>
+                    <span id="contract-address">GNxYv32buvqPS7M2GuXHxSxSN8weEkQiRuD575LXRYvu</span>
                     <span class="copy-icon" id="copy-address">📋</span>
                 </div>
             </div>
@@ -1681,10 +1681,10 @@
                         <span>LIVE</span>
                     </div>
                 </div>
-                <div class="burn-value" id="total-burned">122,503,892</div>
+                <div class="burn-value" id="total-burned">0</div>
                 <div class="progress-container">
                     <div class="progress-bar-bg">
-                        <div class="progress-bar" id="burn-progress" style="width: 12.25%">
+                        <div class="progress-bar" id="burn-progress" style="width: 0%">
                             <div class="progress-fire-effect"></div>
                         </div>
                     </div>
@@ -2228,18 +2228,9 @@
                 }
             }
             
-            // Initialize the page
-            animateCounter('total-burned', 0, 122503892, 2000);
+            // Page will be initialized by fetchBurnData
             
-            // Initialize progress bar
-            const progressBar = document.getElementById('burn-progress');
-            const percentageElement = document.getElementById('burn-percentage');
-            if (progressBar) {
-                progressBar.style.width = '12.25%';
-            }
-            if (percentageElement) {
-                percentageElement.textContent = '12.25%';
-            }
+            // Progress bar will be initialized by fetchBurnData
             
             // Set up copy address functionality
             setupCopyAddress();
@@ -2264,55 +2255,178 @@
             // Set up step hover effects
             setupStepHover();
             
-            // Set up refresh button
+            // Set up refresh button to fetch real data
             const refreshButton = document.getElementById('refresh-data');
             if (refreshButton) {
                 refreshButton.addEventListener('click', function() {
-                    // Simulate refreshing data
-                    const burnIncrease = Math.floor(Math.random() * 10000) + 5000;
-                    const currentBurnedElement = document.getElementById('total-burned');
+                    // Refresh all data from API
+                    fetchBurnData();
                     
-                    if (currentBurnedElement) {
-                        const currentBurned = parseInt(currentBurnedElement.textContent.replace(/,/g, ''));
-                        const newBurned = currentBurned + burnIncrease;
-                        
-                        // Animate the counter
-                        animateCounter('total-burned', currentBurned, newBurned, 1000);
-                        
-                        // Update progress bar
-                        const percentage = (newBurned / 1000000000) * 100;
-                        if (progressBar && percentageElement) {
-                            progressBar.style.width = `${percentage.toFixed(2)}%`;
-                            percentageElement.textContent = `${percentage.toFixed(2)}%`;
-                        }
-                    }
-                    
-                    // Update market cap with random value
-                    const marketCapElement = document.getElementById('current-marketcap');
-                    if (marketCapElement) {
-                        const randomIncrease = Math.floor(Math.random() * 5000) + 1000;
-                        marketCapElement.innerHTML = `Current Market Cap: <strong>$${(350.0 + randomIncrease/1000).toFixed(1)}K</strong>`;
-                    }
+                    // Add a visual indicator that refresh is happening
+                    refreshButton.classList.add('refreshing');
+                    setTimeout(() => {
+                        refreshButton.classList.remove('refreshing');
+                    }, 1000);
                 });
             }
             
-            // Add API fetch functionality
+            // Fetch and update all real-time data
             async function fetchBurnData() {
                 try {
-                    const response = await fetch('/api/metrics');
-                    if (response.ok) {
-                        const data = await response.json();
-                        // Update UI with real data
-                        console.log("Fetched data:", data);
-                        // You can update the UI here with real data when available
+                    // Fetch metrics data
+                    const metricsResponse = await fetch('/api/metrics');
+                    if (metricsResponse.ok) {
+                        const metricsData = await metricsResponse.json();
+                        console.log("Fetched metrics data:", metricsData);
+                        
+                        // Update contract address if available
+                        if (metricsData.tokenAddress) {
+                            const contractAddressElement = document.getElementById('contract-address');
+                            if (contractAddressElement) {
+                                contractAddressElement.textContent = metricsData.tokenAddress;
+                            }
+                        }
+                        
+                        // Update total tokens burned
+                        const totalBurnedElement = document.getElementById('total-burned');
+                        if (totalBurnedElement && metricsData.totalBurned !== undefined) {
+                            totalBurnedElement.textContent = metricsData.totalBurned.toLocaleString();
+                        }
+                        
+                        // Update burn percentage
+                        const initialSupply = 1000000000; // 1 billion
+                        const burnPercentage = ((metricsData.totalBurned || 0) / initialSupply * 100).toFixed(2);
+                        
+                        const progressBar = document.getElementById('burn-progress');
+                        const percentageElement = document.getElementById('burn-percentage');
+                        
+                        if (progressBar) {
+                            progressBar.style.width = `${burnPercentage}%`;
+                        }
+                        
+                        if (percentageElement) {
+                            percentageElement.textContent = `${burnPercentage}%`;
+                        }
+                    }
+                    
+                    // Calculate market cap from metrics data (not from milestones)
+                    // Market cap = price × total supply (1B)
+                    if (metricsData && metricsData.priceInUsd !== undefined) {
+                        const totalSupply = 1000000000; // 1B tokens
+                        const marketCap = metricsData.priceInUsd * totalSupply;
+                        
+                        // Update market cap display
+                        const marketCapElement = document.getElementById('current-marketcap');
+                        if (marketCapElement) {
+                            // Format market cap with K/M/B suffix
+                            let formattedMarketCap;
+                            if (marketCap >= 1000000000) {
+                                formattedMarketCap = (marketCap / 1000000000).toFixed(2) + 'B';
+                            } else if (marketCap >= 1000000) {
+                                formattedMarketCap = (marketCap / 1000000).toFixed(2) + 'M';
+                            } else if (marketCap >= 1000) {
+                                formattedMarketCap = (marketCap / 1000).toFixed(1) + 'K';
+                            } else {
+                                formattedMarketCap = marketCap.toFixed(2);
+                            }
+                            
+                            marketCapElement.innerHTML = `Current Market Cap: <strong>$${formattedMarketCap}</strong>`;
+                        }
+                    }
+                    
+                    // Fetch milestones data
+                    const milestonesResponse = await fetch('/api/milestones');
+                    if (milestonesResponse.ok) {
+                        const milestonesData = await milestonesResponse.json();
+                        console.log("Fetched milestones data:", milestonesData);
+                        
+                        // Update milestones completed counter
+                        const completedCount = milestonesData.progress?.completedCount || 0;
+                        const totalCount = milestonesData.progress?.totalCount || 0;
+                        
+                        const milestonesCompletedElement = document.querySelector('.stat-card:nth-child(1) .stat-value');
+                        if (milestonesCompletedElement) {
+                            milestonesCompletedElement.textContent = `${completedCount} of ${totalCount}`;
+                        }
+                        
+                        // Update next milestone info
+                        const nextMilestone = milestonesData.progress?.nextMilestone;
+                        if (nextMilestone) {
+                            const nextMilestoneElement = document.querySelector('.stat-card:nth-child(4) .stat-value');
+                            const nextMilestoneSubElement = document.querySelector('.stat-card:nth-child(4) .stat-sub');
+                            
+                            if (nextMilestoneElement) {
+                                let formattedMcap;
+                                if (nextMilestone.marketCap >= 1000000000) {
+                                    formattedMcap = (nextMilestone.marketCap / 1000000000).toFixed(2) + 'B';
+                                } else if (nextMilestone.marketCap >= 1000000) {
+                                    formattedMcap = (nextMilestone.marketCap / 1000000).toFixed(2) + 'M';
+                                } else if (nextMilestone.marketCap >= 1000) {
+                                    formattedMcap = (nextMilestone.marketCap / 1000).toFixed(1) + 'K';
+                                } else {
+                                    formattedMcap = nextMilestone.marketCap.toFixed(2);
+                                }
+                                
+                                nextMilestoneElement.textContent = `$${formattedMcap}`;
+                            }
+                            
+                            if (nextMilestoneSubElement) {
+                                nextMilestoneSubElement.textContent = `${nextMilestone.percentOfSupply.toFixed(2)}% Burn (${nextMilestone.burnAmount.toLocaleString()} tokens)`;
+                            }
+                        }
+                    }
+                    
+                    // Fetch rewards data
+                    const rewardsResponse = await fetch('/api/rewards');
+                    if (rewardsResponse.ok) {
+                        const rewardsData = await rewardsResponse.json();
+                        console.log("Fetched rewards data:", rewardsData);
+                        
+                        // Update rewards table
+                        const rewardsTableBody = document.querySelector('#rewards-table tbody');
+                        if (rewardsTableBody && rewardsData.rewards) {
+                            // Clear current table
+                            rewardsTableBody.innerHTML = '';
+                            
+                            // Add each reward entry
+                            rewardsData.rewards.forEach(reward => {
+                                const row = document.createElement('tr');
+                                
+                                // Format date
+                                const date = new Date(reward.timestamp);
+                                const formattedDate = date.toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                });
+                                
+                                // Create table row
+                                row.innerHTML = `
+                                    <td>${formattedDate}</td>
+                                    <td>${reward.rewardAmount.toFixed(4)} SOL</td>
+                                    <td>$${reward.rewardAmountUsd.toFixed(2)}</td>
+                                    <td>
+                                        <a href="https://solscan.io/tx/${reward.burnTxHash}" target="_blank" class="tx-link">
+                                            ${reward.burnTxHash.substring(0, 6)}...${reward.burnTxHash.substring(reward.burnTxHash.length - 4)}
+                                            <span class="link-icon">🔗</span>
+                                        </a>
+                                    </td>
+                                `;
+                                
+                                rewardsTableBody.appendChild(row);
+                            });
+                        }
                     }
                 } catch (error) {
-                    console.error("Error fetching burn data:", error);
+                    console.error("Error fetching data:", error);
                 }
             }
             
-            // Uncomment to fetch real data when API is ready
-            // fetchBurnData();
+            // Fetch real data from the API
+            fetchBurnData();
+            
+            // Auto-refresh every 2 minutes
+            setInterval(fetchBurnData, 120000);
         });
     </script>
 </body>

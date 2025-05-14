@@ -4,7 +4,7 @@
  */
 const cron = require('node-cron');
 const logger = require('../utils/logger').rewards;
-const { claimRewards, checkAvailableRewards } = require('../utils/claimRewards');
+const { claimRewards, checkAvailableRewards } = require('./claimRewards');
 const { buyTokens } = require('../buyback/index');
 require('dotenv').config();
 

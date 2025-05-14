@@ -51,14 +51,40 @@ const initialize = async () => {
       console.log('Creating metrics data file...');
       
       const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-      const reserveWalletPercentage = 0.3; // 30%
+      
+      // Try to get actual reserve wallet balance if token exists
+      let reserveWalletBalance;
+      let reservePercentage;
+      
+      if (process.env.TOKEN_ADDRESS && process.env.SOLANA_PUBLIC_KEY) {
+        try {
+          // Dynamic import of solana utils (since this is a standalone initialization script)
+          const { getTokenBalance } = require('./src/scripts/utils/solana');
+          
+          console.log('Fetching actual reserve wallet balance...');
+          reserveWalletBalance = await getTokenBalance(process.env.SOLANA_PUBLIC_KEY, process.env.TOKEN_ADDRESS);
+          reservePercentage = reserveWalletBalance / initialSupply;
+          
+          console.log(`Actual reserve wallet balance: ${reserveWalletBalance.toLocaleString()} tokens (${(reservePercentage * 100).toFixed(2)}% of supply)`);
+        } catch (error) {
+          console.log(`Couldn't fetch actual reserve balance: ${error.message}`);
+        }
+      }
+      
+      // Fall back to default values if we couldn't get the actual balance
+      if (!reserveWalletBalance) {
+        console.log('Using default 30% reserve estimate');
+        reservePercentage = 0.3; // 30% as fallback
+        reserveWalletBalance = initialSupply * reservePercentage;
+      }
       
       const initialMetrics = [{
         id: `initial-metrics`,
         timestamp: new Date().toISOString(),
         totalSupply: initialSupply,
-        circulatingSupply: initialSupply * (1 - reserveWalletPercentage),
-        reserveWalletBalance: initialSupply * reserveWalletPercentage,
+        circulatingSupply: initialSupply - reserveWalletBalance,
+        reserveWalletBalance,
+        reservePercentage,
         totalBurned: 0,
         buybackBurned: 0,
         milestoneBurned: 0,

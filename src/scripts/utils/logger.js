@@ -54,5 +54,6 @@ logger.price = logger.child({ component: 'price-oracle' });
 logger.rewards = logger.child({ component: 'rewards' });
 logger.tokenCreation = logger.child({ component: 'token-creation' });
 logger.setup = logger.child({ component: 'setup' });
+logger.recovery = logger.child({ component: 'recovery' });
 
 module.exports = logger;

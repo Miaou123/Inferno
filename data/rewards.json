@@ -53,5 +53,15 @@
     "processedAt": "2025-05-14T09:38:03.224Z",
     "burnTxHash": "mockTxc8ura6i",
     "updatedAt": "2025-05-14T09:38:03.224Z"
+  },
+  {
+    "id": "1747220675530-64llyt8",
+    "timestamp": "2025-05-14T11:04:35.530Z",
+    "rewardAmount": 0.42,
+    "rewardAmountUsd": 167.58,
+    "isProcessed": true,
+    "processedAt": "2025-05-14T11:04:35.530Z",
+    "burnTxHash": "mockTx5gvizvn",
+    "updatedAt": "2025-05-14T11:04:35.530Z"
   }
 ]

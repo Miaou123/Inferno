@@ -19,7 +19,10 @@ const FILES = {
   burns: path.join(DATA_DIR, 'burns.json'),
   metrics: path.join(DATA_DIR, 'metrics.json'),
   milestones: path.join(DATA_DIR, 'milestones.json'),
-  rewards: path.join(DATA_DIR, 'rewards.json')
+  rewards: path.join(DATA_DIR, 'rewards.json'),
+  tokenDetails: path.join(DATA_DIR, 'tokenDetails.json'),
+  tokenBuys: path.join(DATA_DIR, 'tokenBuys.json'),
+  tokenSetup: path.join(DATA_DIR, 'tokenSetup.json')
 };
 
 /**
@@ -27,17 +30,11 @@ const FILES = {
  */
 const initializeStorage = () => {
   // Create empty files with default structure if they don't exist
-  if (!fs.existsSync(FILES.burns)) {
-    fs.writeFileSync(FILES.burns, JSON.stringify([], null, 2));
-  }
-  
-  if (!fs.existsSync(FILES.metrics)) {
-    fs.writeFileSync(FILES.metrics, JSON.stringify([], null, 2));
-  }
-  
-  if (!fs.existsSync(FILES.rewards)) {
-    fs.writeFileSync(FILES.rewards, JSON.stringify([], null, 2));
-  }
+  Object.values(FILES).forEach(filePath => {
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+    }
+  });
   
   logger.info('File storage initialized');
 };

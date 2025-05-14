@@ -8,7 +8,8 @@
  * 4. Updates the project configuration with token details
  * 5. Initializes all the required data structures
  */
-const { setupInfernoToken } = require('./utils/tokenCreation');
+const { setupInfernoToken } = require('./token/createToken.js');
+// MOCK_MODE can be set via environment variable when running the script
 const fileStorage = require('./utils/fileStorage');
 const logger = require('./utils/logger').setup;
 require('dotenv').config();
@@ -43,22 +44,57 @@ async function main() {
     
     const { tokenAddress } = result.setupDetails;
     
-    // Initialize metrics with initial supply
+    // Initialize metrics with initial supply and actual reserve balance
     const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-    const reservePercent = 0.3; // 30% reserve
     
-    // Create initial metrics
-    const initialMetrics = {
-      timestamp: new Date().toISOString(),
-      totalSupply: initialSupply,
-      circulatingSupply: initialSupply * (1 - reservePercent),
-      reserveWalletBalance: initialSupply * reservePercent,
-      totalBurned: 0,
-      buybackBurned: 0,
-      milestoneBurned: 0,
-      tokenAddress
-    };
+    // Get the solana utils for token balance
+    const { getTokenBalance } = require('./utils/solana');
     
+    // Get actual reserve wallet balance
+    logger.info('Fetching actual reserve wallet balance...');
+    const reserveWalletAddress = process.env.SOLANA_PUBLIC_KEY; // Same wallet used for creation
+    
+    let initialMetrics;
+    try {
+      // Query the actual token balance
+      const reserveWalletBalance = await getTokenBalance(reserveWalletAddress, tokenAddress);
+      
+      // Calculate actual reserve percentage
+      const actualReservePercentage = reserveWalletBalance / initialSupply;
+      logger.info(`Actual reserve wallet balance: ${reserveWalletBalance.toLocaleString()} tokens (${(actualReservePercentage * 100).toFixed(2)}% of supply)`);
+      
+      // Create initial metrics with actual values
+      initialMetrics = {
+        timestamp: new Date().toISOString(),
+        totalSupply: initialSupply,
+        circulatingSupply: initialSupply - reserveWalletBalance,
+        reserveWalletBalance,
+        reservePercentage: actualReservePercentage,
+        totalBurned: 0,
+        buybackBurned: 0,
+        milestoneBurned: 0,
+        tokenAddress
+      };
+    } catch (error) {
+      // Fallback to estimated values if balance check fails
+      logger.warn(`Couldn't fetch actual reserve balance: ${error.message}. Using default 30% estimate.`);
+      const reservePercent = 0.3; // 30% reserve as fallback
+      
+      // Create initial metrics with estimated values
+      initialMetrics = {
+        timestamp: new Date().toISOString(),
+        totalSupply: initialSupply,
+        circulatingSupply: initialSupply * (1 - reservePercent),
+        reserveWalletBalance: initialSupply * reservePercent,
+        reservePercentage: reservePercent,
+        totalBurned: 0,
+        buybackBurned: 0,
+        milestoneBurned: 0,
+        tokenAddress
+      };
+    }
+    
+    // Save the metrics
     fileStorage.saveRecord('metrics', initialMetrics);
     
     // Initialize milestones based on README schedule
@@ -96,7 +132,7 @@ async function main() {
     logger.info('$INFERNO TOKEN SETUP COMPLETED SUCCESSFULLY');
     logger.info(`Token Address: ${tokenAddress}`);
     logger.info(`Initial Supply: ${initialSupply}`);
-    logger.info(`Reserve Balance: ${initialMetrics.reserveWalletBalance} (${reservePercent*100}%)`);
+    logger.info(`Reserve Balance: ${initialMetrics.reserveWalletBalance} (${(initialMetrics.reservePercentage*100).toFixed(2)}%)`);
     logger.info(`Circulating Supply: ${initialMetrics.circulatingSupply}`);
     logger.info('===============================================');
     logger.info('Next steps:');

@@ -9,8 +9,8 @@
     "buybackBurned": 0,
     "milestoneBurned": 0,
     "marketCap": 0,
-    "priceInSol": 0.00001500,
-    "priceInUsd": 0.003000
+    "priceInSol": 0.000015,
+    "priceInUsd": 0.003
   },
   {
     "id": "1747179479250-abd6y42",
@@ -23,7 +23,7 @@
     "milestoneBurned": 0,
     "marketCap": 350000,
     "priceInSol": 0.00001824,
-    "priceInUsd": 0.003350
+    "priceInUsd": 0.00335
   },
   {
     "id": "1747181479250-kja5l42",
@@ -36,6 +36,29 @@
     "milestoneBurned": 95000000,
     "marketCap": 389000,
     "priceInSol": 0.00001912,
-    "priceInUsd": 0.003450
+    "priceInUsd": 0.00345
+  },
+  {
+    "id": "1747231632122-cg5ddz8",
+    "timestamp": "2025-05-14T14:07:12.122Z",
+    "totalSupply": 1000000000,
+    "circulatingSupply": 1000000000,
+    "reserveWalletBalance": 0,
+    "reservePercentage": 0,
+    "totalBurned": 0,
+    "buybackBurned": 0,
+    "milestoneBurned": 0,
+    "tokenAddress": "GNxYv32buvqPS7M2GuXHxSxSN8weEkQiRuD575LXRYvu"
+  },
+  {
+    "id": "1747232246030-54g9cz5",
+    "timestamp": "2025-05-14T14:17:26.030Z",
+    "totalSupply": 1000000000,
+    "circulatingSupply": 1000000000,
+    "reserveWalletBalance": 0,
+    "totalBurned": 0,
+    "buybackBurned": 0,
+    "milestoneBurned": 0,
+    "tokenAddress": "GNxYv32buvqPS7M2GuXHxSxSN8weEkQiRuD575LXRYvu"
   }
 ]

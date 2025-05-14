@@ -16,6 +16,7 @@ const {
 const { fetchTokenPrice } = require('../utils/priceOracle');
 const logger = require('../utils/logger').buyback;
 const fileStorage = require('../utils/fileStorage');
+const { createKeypair, getSolBalance, burnTokens, getConnection } = require('../utils/solana');
 require('dotenv').config();
 
 // Configuration from environment variables

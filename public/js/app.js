@@ -46,24 +46,60 @@ async function initializeDashboard() {
 /**
  * Load demo data when API is not available
  */
-function loadDemoData() {
-    console.log('Loading demo data...');
+async function loadDemoData() {
+    console.log('Loading data from API or using fallback...');
     
-    // Initialize with static data
-    const totalBurned = 122503892;
-    const burnPercentage = 12.25;
+    try {
+        // Try to get data from API first
+        const metricsData = await fetchMetricsFromAPI();
+        
+        if (metricsData) {
+            // Use real data from API
+            const totalBurned = metricsData.totalBurned || 0;
+            const initialSupply = 1000000000; // 1 billion
+            const burnPercentage = ((totalBurned / initialSupply) * 100).toFixed(2);
+            
+            // Animate counters
+            animateCounter('total-burned', 0, totalBurned, 2000);
+            
+            // Set progress bar
+            const progressBar = document.getElementById('burn-progress');
+            const percentageElement = document.getElementById('burn-percentage');
+            if (progressBar) {
+                progressBar.style.width = `${burnPercentage}%`;
+            }
+            if (percentageElement) {
+                percentageElement.textContent = `${burnPercentage}%`;
+            }
+            
+            console.log('Loaded real data from API');
+            return;
+        }
+    } catch (error) {
+        console.error('Error in loadDemoData with API:', error);
+    }
     
-    // Animate counters
-    animateCounter('total-burned', 0, totalBurned, 2000);
+    // Fallback to minimal data - not hardcoded values
+    console.log('Using minimal fallback data');
     
-    // Set progress bar
+    const totalBurned = 0;
+    const burnPercentage = 0;
+    
+    // Set values without animation for fallback
+    const totalBurnedElement = document.getElementById('total-burned');
     const progressBar = document.getElementById('burn-progress');
     const percentageElement = document.getElementById('burn-percentage');
+    
+    if (totalBurnedElement) {
+        totalBurnedElement.textContent = totalBurned.toLocaleString();
+    }
+    
     if (progressBar) {
         progressBar.style.width = `${burnPercentage}%`;
     }
+    
     if (percentageElement) {
-        percentageElement.textContent = `${burnPercentage}%`;
+        percentageElement.textContent = `${burnPercentage.toFixed(2)}%`;
     }
 }
 
@@ -91,6 +127,7 @@ async function refreshData(animate = false) {
 /**
  * Fetch metrics data from API and update UI
  * @param {boolean} animate - Whether to animate the transitions
+ * @returns {Object|null} The metrics data if successful, null if failed
  */
 async function fetchAndUpdateMetrics(animate = false) {
     try {
@@ -106,9 +143,29 @@ async function fetchAndUpdateMetrics(animate = false) {
         // Update total burned
         updateBurnMetrics(data, animate);
         
+        return data;
     } catch (error) {
         console.error('Error fetching metrics:', error);
         throw error;
+    }
+}
+
+/**
+ * Helper function to fetch metrics without updating UI
+ * @returns {Object|null} The metrics data if successful, null if failed
+ */
+async function fetchMetricsFromAPI() {
+    try {
+        const response = await fetch('/api/metrics');
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching metrics:', error);
+        return null;
     }
 }
 
@@ -347,42 +404,76 @@ function setupStepHover() {
 }
 
 /**
- * Simulate data refresh when API is not available
- * Useful for demo mode
+ * Refresh data when API is not available
+ * Try to get real data first, fall back to minimal simulation only if needed
  */
-function simulateDataRefresh() {
-    // Get current burn amount
+async function simulateDataRefresh() {
+    try {
+        // Try to get real data from API first
+        const metricsData = await fetchMetricsFromAPI();
+        const milestonesData = await fetchMilestonesFromAPI();
+        
+        if (metricsData) {
+            // Use real metrics data
+            updateBurnMetrics(metricsData, true);
+            console.log('Used real metrics data for refresh');
+        }
+        
+        if (milestonesData) {
+            // Update current market cap with real data
+            const marketCapElement = document.getElementById('current-marketcap');
+            if (marketCapElement && milestonesData.currentMarketCap) {
+                marketCapElement.innerHTML = `Current Market Cap: <strong>$${formatCurrency(milestonesData.currentMarketCap)}</strong>`;
+            }
+            console.log('Used real milestones data for refresh');
+        }
+        
+        // If we got either real data source, don't fall back to simulation
+        if (metricsData || milestonesData) {
+            return;
+        }
+    } catch (error) {
+        console.error('Error getting real data for refresh:', error);
+    }
+    
+    // Only if all API attempts failed, get current values from UI
     const totalBurnedElement = document.getElementById('total-burned');
     const progressBar = document.getElementById('burn-progress');
     const percentageElement = document.getElementById('burn-percentage');
     const marketCapElement = document.getElementById('current-marketcap');
     
-    if (totalBurnedElement && progressBar && percentageElement) {
-        const currentBurned = parseInt(totalBurnedElement.textContent.replace(/,/g, '')) || 122503892;
-        const burnIncrease = Math.floor(Math.random() * 10000) + 5000;
-        const newBurned = currentBurned + burnIncrease;
-        
-        // Animate the counter
-        animateCounter('total-burned', currentBurned, newBurned, 1000);
-        
-        // Calculate and update percentage
-        const percentage = (newBurned / 1000000000) * 100;
-        animateProgressBar(progressBar, percentageElement, parseFloat(percentageElement.textContent), percentage.toFixed(2));
-    }
+    console.log('Using minimal data refresh - only current displayed values');
     
-    // Update market cap with random value
-    if (marketCapElement) {
-        const currentText = marketCapElement.innerHTML;
-        const match = currentText.match(/\$(\d+\.\d+)K/);
-        let currentValue = 350.0;
+    // Don't increment values artificially, just use what we have
+    if (totalBurnedElement && progressBar && percentageElement) {
+        const currentBurned = parseInt(totalBurnedElement.textContent.replace(/,/g, '')) || 0;
         
-        if (match && match[1]) {
-            currentValue = parseFloat(match[1]);
+        // Just refresh the display with current values
+        totalBurnedElement.textContent = currentBurned.toLocaleString();
+        
+        // Keep current percentage
+        const currentPercentage = parseFloat(percentageElement.textContent) || 0;
+        progressBar.style.width = `${currentPercentage}%`;
+        percentageElement.textContent = `${currentPercentage.toFixed(2)}%`;
+    }
+}
+
+/**
+ * Helper function to fetch milestones without updating UI
+ * @returns {Object|null} The milestones data if successful, null if failed
+ */
+async function fetchMilestonesFromAPI() {
+    try {
+        const response = await fetch('/api/milestones');
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
         }
         
-        const randomIncrease = Math.floor(Math.random() * 5000) + 1000;
-        const newValue = (currentValue + randomIncrease/1000).toFixed(1);
-        marketCapElement.innerHTML = `Current Market Cap: <strong>$${newValue}K</strong>`;
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching milestones directly:', error);
+        return null;
     }
 }
 

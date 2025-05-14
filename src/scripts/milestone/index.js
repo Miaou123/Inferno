@@ -27,20 +27,54 @@ const initializeStorage = async () => {
     const metrics = fileStorage.findRecords('metrics');
     
     if (metrics.length === 0) {
-      // Create initial metrics record
+      // Create initial metrics record with actual reserve balance
       const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-      const reserveWalletPercentage = 0.3; // 30%
       
-      fileStorage.saveRecord('metrics', {
-        timestamp: new Date().toISOString(),
-        totalSupply: initialSupply,
-        circulatingSupply: initialSupply * (1 - reserveWalletPercentage),
-        reserveWalletBalance: initialSupply * reserveWalletPercentage,
-        totalBurned: 0,
-        buybackBurned: 0,
-        milestoneBurned: 0,
-        marketCap: 0
-      });
+      // Try to get actual reserve wallet balance
+      try {
+        // Get wallet address from env (same wallet used for creation)
+        const walletAddress = process.env.SOLANA_PUBLIC_KEY;
+        const tokenAddress = process.env.TOKEN_ADDRESS;
+        
+        // Only try to get balance if we have both addresses
+        if (walletAddress && tokenAddress) {
+          const reserveWalletBalance = await getTokenBalance(walletAddress, tokenAddress);
+          const reservePercentage = reserveWalletBalance / initialSupply;
+          
+          logger.info(`Using actual reserve balance: ${reserveWalletBalance.toLocaleString()} tokens (${(reservePercentage * 100).toFixed(2)}% of supply)`);
+          
+          fileStorage.saveRecord('metrics', {
+            timestamp: new Date().toISOString(),
+            totalSupply: initialSupply,
+            circulatingSupply: initialSupply - reserveWalletBalance,
+            reserveWalletBalance,
+            reservePercentage,
+            totalBurned: 0,
+            buybackBurned: 0,
+            milestoneBurned: 0,
+            marketCap: 0
+          });
+        } else {
+          // Fallback if addresses aren't available
+          throw new Error('Missing wallet or token address');
+        }
+      } catch (err) {
+        // Fallback to default 30% if we can't get actual balance
+        logger.warn(`Couldn't get actual reserve balance: ${err.message}. Using default 30% estimate.`);
+        const reservePercentage = 0.3; // 30% as fallback
+        
+        fileStorage.saveRecord('metrics', {
+          timestamp: new Date().toISOString(),
+          totalSupply: initialSupply,
+          circulatingSupply: initialSupply * (1 - reservePercentage),
+          reserveWalletBalance: initialSupply * reservePercentage,
+          reservePercentage,
+          totalBurned: 0,
+          buybackBurned: 0,
+          milestoneBurned: 0,
+          marketCap: 0
+        });
+      }
       
       logger.info('Initialized metrics in storage');
     }
@@ -294,8 +328,8 @@ const startMilestoneMonitoring = async () => {
     // Run initial check
     await checkMilestones();
     
-    // Schedule regular checks (every 15 minutes)
-    cron.schedule('*/15 * * * *', async () => {
+    // Schedule regular checks (every 5 minutes)
+    cron.schedule('*/5 * * * *', async () => {
       logger.info('Running scheduled milestone check');
       await checkMilestones();
     });

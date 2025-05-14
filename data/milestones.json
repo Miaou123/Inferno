@@ -3,7 +3,7 @@
     "id": "milestone-100k",
     "marketCap": 100000,
     "burnAmount": 50000000,
-    "percentOfSupply": 5.00,
+    "percentOfSupply": 5,
     "completed": true,
     "completedAt": "2025-05-13T20:58:49.250Z",
     "transactionHash": "Mi1est0neBurnTxHash100k"
@@ -12,7 +12,7 @@
     "id": "milestone-200k",
     "marketCap": 200000,
     "burnAmount": 25000000,
-    "percentOfSupply": 2.50,
+    "percentOfSupply": 2.5,
     "completed": true,
     "completedAt": "2025-05-13T22:25:49.250Z",
     "transactionHash": "Mi1est0neBurnTxHash200k"
@@ -21,7 +21,7 @@
     "id": "milestone-300k",
     "marketCap": 300000,
     "burnAmount": 20000000,
-    "percentOfSupply": 2.00,
+    "percentOfSupply": 2,
     "completed": true,
     "completedAt": "2025-05-14T00:52:09.250Z",
     "transactionHash": "Mi1est0neBurnTxHash300k"
@@ -30,21 +30,21 @@
     "id": "milestone-500k",
     "marketCap": 500000,
     "burnAmount": 20000000,
-    "percentOfSupply": 2.00,
+    "percentOfSupply": 2,
     "completed": false
   },
   {
     "id": "milestone-750k",
     "marketCap": 750000,
     "burnAmount": 15000000,
-    "percentOfSupply": 1.50,
+    "percentOfSupply": 1.5,
     "completed": false
   },
   {
     "id": "milestone-1m",
     "marketCap": 1000000,
     "burnAmount": 15000000,
-    "percentOfSupply": 1.50,
+    "percentOfSupply": 1.5,
     "completed": false
   },
   {
@@ -65,28 +65,28 @@
     "id": "milestone-3.5m",
     "marketCap": 3500000,
     "burnAmount": 10000000,
-    "percentOfSupply": 1.00,
+    "percentOfSupply": 1,
     "completed": false
   },
   {
     "id": "milestone-5m",
     "marketCap": 5000000,
     "burnAmount": 10000000,
-    "percentOfSupply": 1.00,
+    "percentOfSupply": 1,
     "completed": false
   },
   {
     "id": "milestone-7.5m",
     "marketCap": 7500000,
     "burnAmount": 10000000,
-    "percentOfSupply": 1.00,
+    "percentOfSupply": 1,
     "completed": false
   },
   {
     "id": "milestone-10m",
     "marketCap": 10000000,
     "burnAmount": 10000000,
-    "percentOfSupply": 1.00,
+    "percentOfSupply": 1,
     "completed": false
   },
   {
@@ -107,14 +107,14 @@
     "id": "milestone-35m",
     "marketCap": 35000000,
     "burnAmount": 5000000,
-    "percentOfSupply": 0.50,
+    "percentOfSupply": 0.5,
     "completed": false
   },
   {
     "id": "milestone-50m",
     "marketCap": 50000000,
     "burnAmount": 5000000,
-    "percentOfSupply": 0.50,
+    "percentOfSupply": 0.5,
     "completed": false
   },
   {
@@ -135,7 +135,178 @@
     "id": "milestone-100m",
     "marketCap": 100000000,
     "burnAmount": 50000000,
-    "percentOfSupply": 5.00,
+    "percentOfSupply": 5,
     "completed": false
+  },
+  {
+    "id": "1747231632122-ydnv5g1",
+    "timestamp": "2025-05-14T14:07:12.122Z",
+    "mcap": 100000,
+    "amount": 50000000,
+    "percent": 5,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.122Z"
+  },
+  {
+    "id": "1747231632122-68c5f5o",
+    "timestamp": "2025-05-14T14:07:12.122Z",
+    "mcap": 200000,
+    "amount": 25000000,
+    "percent": 2.5,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.122Z"
+  },
+  {
+    "id": "1747231632123-xnrb3sd",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 300000,
+    "amount": 20000000,
+    "percent": 2,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632123-1zd7a1k",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 500000,
+    "amount": 20000000,
+    "percent": 2,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632123-72ysuuo",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 750000,
+    "amount": 15000000,
+    "percent": 1.5,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632123-qlsgj3u",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 1000000,
+    "amount": 15000000,
+    "percent": 1.5,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632123-0ijy8bl",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 1500000,
+    "amount": 12500000,
+    "percent": 1.25,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632123-qugtwvq",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 2500000,
+    "amount": 12500000,
+    "percent": 1.25,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632123-xrdieq2",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 3500000,
+    "amount": 10000000,
+    "percent": 1,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632123-97ki2rd",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 5000000,
+    "amount": 10000000,
+    "percent": 1,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632123-v4kkuta",
+    "timestamp": "2025-05-14T14:07:12.123Z",
+    "mcap": 7500000,
+    "amount": 10000000,
+    "percent": 1,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.123Z"
+  },
+  {
+    "id": "1747231632124-dbwbmrv",
+    "timestamp": "2025-05-14T14:07:12.124Z",
+    "mcap": 10000000,
+    "amount": 10000000,
+    "percent": 1,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.124Z"
+  },
+  {
+    "id": "1747231632124-nsluykp",
+    "timestamp": "2025-05-14T14:07:12.124Z",
+    "mcap": 15000000,
+    "amount": 7500000,
+    "percent": 0.75,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.124Z"
+  },
+  {
+    "id": "1747231632124-t489gyv",
+    "timestamp": "2025-05-14T14:07:12.124Z",
+    "mcap": 25000000,
+    "amount": 7500000,
+    "percent": 0.75,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.124Z"
+  },
+  {
+    "id": "1747231632124-qa4s5tn",
+    "timestamp": "2025-05-14T14:07:12.124Z",
+    "mcap": 35000000,
+    "amount": 5000000,
+    "percent": 0.5,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.124Z"
+  },
+  {
+    "id": "1747231632124-nngz6yt",
+    "timestamp": "2025-05-14T14:07:12.124Z",
+    "mcap": 50000000,
+    "amount": 5000000,
+    "percent": 0.5,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.124Z"
+  },
+  {
+    "id": "1747231632124-j7evs1q",
+    "timestamp": "2025-05-14T14:07:12.124Z",
+    "mcap": 75000000,
+    "amount": 7500000,
+    "percent": 0.75,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.124Z"
+  },
+  {
+    "id": "1747231632124-j0nxxb7",
+    "timestamp": "2025-05-14T14:07:12.124Z",
+    "mcap": 90000000,
+    "amount": 7500000,
+    "percent": 0.75,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.124Z"
+  },
+  {
+    "id": "1747231632124-inza5sm",
+    "timestamp": "2025-05-14T14:07:12.124Z",
+    "mcap": 100000000,
+    "amount": 50000000,
+    "percent": 5,
+    "status": "pending",
+    "createdAt": "2025-05-14T14:07:12.124Z"
   }
 ]

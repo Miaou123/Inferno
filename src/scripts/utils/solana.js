@@ -16,6 +16,7 @@ const {
 } = require('@solana/spl-token');
 const fs = require('fs');
 const path = require('path');
+const bs58 = require('bs58');
 const logger = require('./logger');
 require('dotenv').config();
 
@@ -37,15 +38,36 @@ const getConnection = () => {
  */
 const createKeypair = (privateKeyString = process.env.SOLANA_PRIVATE_KEY) => {
   try {
+    // In mock mode, generate a random keypair
+    if (process.env.MOCK_MODE === 'true') {
+      return Keypair.generate();
+    }
+    
     // Check if privateKeyString is a path to a file
     if (privateKeyString.startsWith('/') || privateKeyString.startsWith('./')) {
       const keyData = JSON.parse(fs.readFileSync(privateKeyString, 'utf-8'));
       return Keypair.fromSecretKey(new Uint8Array(keyData));
     }
     
-    // Otherwise assume it's the key itself
-    const privateKey = JSON.parse(privateKeyString);
-    return Keypair.fromSecretKey(new Uint8Array(privateKey));
+    // Handle base58 encoded private keys
+    if (privateKeyString.match(/^[A-Za-z0-9]{64,88}$/)) {
+      try {
+        // Try to decode as base58
+        const decodedKey = bs58.decode(privateKeyString);
+        return Keypair.fromSecretKey(decodedKey);
+      } catch (e) {
+        logger.warn('Failed to decode private key as base58, trying JSON parse');
+      }
+    }
+    
+    // Try as JSON array of numbers
+    try {
+      const privateKey = JSON.parse(privateKeyString);
+      return Keypair.fromSecretKey(new Uint8Array(privateKey));
+    } catch (jsonError) {
+      logger.error('Failed to parse private key as JSON:', jsonError);
+      throw jsonError;
+    }
   } catch (error) {
     logger.error('Error creating keypair:', error);
     throw new Error(`Failed to create keypair: ${error.message}`);
@@ -147,6 +169,25 @@ const burnTokens = async (
     const burnAddress = process.env.BURN_ADDRESS || "1nc1nerator11111111111111111111111111111111";
     const destinationPublicKey = new PublicKey(burnAddress);
     
+    // Check wallet balance before proceeding
+    const senderBalance = await getTokenBalance(senderKeypair.publicKey.toString(), tokenAddress);
+    
+    // Safety check: Verify there are sufficient tokens in the wallet
+    if (senderBalance < amount) {
+      logger.error(`Insufficient tokens in ${burnType} wallet. Required: ${amount.toLocaleString()}, Available: ${senderBalance.toLocaleString()}`);
+      return {
+        success: false,
+        error: 'INSUFFICIENT_TOKENS',
+        details: {
+          required: amount,
+          available: senderBalance,
+          walletType: burnType
+        }
+      };
+    }
+    
+    logger.info(`Sufficient tokens available in ${burnType} wallet. Required: ${amount.toLocaleString()}, Available: ${senderBalance.toLocaleString()}`);
+    
     // Create token object
     const token = new Token(
       connection,
@@ -218,32 +259,80 @@ const burnTokens = async (
       })
     );
     
-    const signature = await sendAndConfirmTransaction(
-      connection,
-      transaction,
-      [senderKeypair],
-      {
-        skipPreflight: false, 
-        preflightCommitment: 'confirmed',
-        maxRetries: 3
+    try {
+      // First simulate the transaction to catch any issues
+      const simulation = await connection.simulateTransaction(transaction);
+      if (simulation.value.err) {
+        logger.error(`Transaction simulation failed: ${JSON.stringify(simulation.value.err)}`);
+        return {
+          success: false,
+          error: 'SIMULATION_FAILED',
+          details: simulation.value.err
+        };
       }
-    );
-    
-    logger.info(`Burned ${amount} tokens with tx: ${signature}`);
-    
-    return {
-      success: true,
-      signature,
-      amount,
-      sender: senderKeypair.publicKey.toString(),
-      burnAddress,
-      memo: `$INFERNO ${burnType.toUpperCase()} BURN: ${amount.toLocaleString()} tokens`
-    };
+      
+      // Send and confirm with proper retry handling
+      const signature = await sendAndConfirmTransaction(
+        connection,
+        transaction,
+        [senderKeypair],
+        {
+          skipPreflight: false, 
+          preflightCommitment: 'confirmed',
+          maxRetries: 3
+        }
+      );
+      
+      logger.info(`Burned ${amount.toLocaleString()} tokens with tx: ${signature}`);
+      
+      return {
+        success: true,
+        signature,
+        amount,
+        sender: senderKeypair.publicKey.toString(),
+        burnAddress,
+        memo: `$INFERNO ${burnType.toUpperCase()} BURN: ${amount.toLocaleString()} tokens`
+      };
+    } catch (txError) {
+      // Differentiate between error types for better handling
+      const errorMessage = txError.message || '';
+      
+      // Categorize error types
+      let errorType = 'UNKNOWN';
+      let shouldRetry = false;
+      
+      if (errorMessage.includes('insufficient funds')) {
+        errorType = 'INSUFFICIENT_FUNDS';
+        shouldRetry = false;
+      } else if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+        errorType = 'RATE_LIMIT';
+        shouldRetry = true;
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        errorType = 'TIMEOUT';
+        shouldRetry = true;
+      } else if (errorMessage.includes('blockhash not found') || errorMessage.includes('old blockhash')) {
+        errorType = 'BLOCKHASH_EXPIRED';
+        shouldRetry = true;
+      } else if (errorMessage.includes('network error') || errorMessage.includes('connection error')) {
+        errorType = 'NETWORK_ERROR';
+        shouldRetry = true;
+      }
+      
+      logger.error(`Transaction failed with error type ${errorType}: ${errorMessage}`);
+      
+      return {
+        success: false,
+        error: errorType,
+        shouldRetry,
+        details: errorMessage
+      };
+    }
   } catch (error) {
-    logger.error('Error burning tokens:', error);
+    logger.error('Error in burn process:', error);
     return {
       success: false,
-      error: error.message
+      error: 'PROCESSING_ERROR',
+      details: error.message
     };
   }
 };

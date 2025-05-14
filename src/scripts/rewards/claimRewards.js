@@ -13,9 +13,9 @@ const {
   ASSOCIATED_TOKEN_PROGRAM_ID, 
   TOKEN_PROGRAM_ID 
 } = require('@solana/spl-token');
-const logger = require('./logger').rewards;
-const fileStorage = require('./fileStorage');
-const solana = require('./solana');
+const logger = require('../utils/logger').rewards;
+const fileStorage = require('../utils/fileStorage');
+const solana = require('../utils/solana');
 
 /**
  * Claim rewards from pump.fun
@@ -128,7 +128,7 @@ const claimRewards = async () => {
     }
     
     // Get USD value of claimed amount
-    const { fetchTokenPrice } = require('./priceOracle');
+    const { fetchTokenPrice } = require('../utils/priceOracle');
     const priceData = await fetchTokenPrice();
     const claimAmountUsd = claimAmount * priceData.solPriceInUsd;
     
