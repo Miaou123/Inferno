@@ -5,6 +5,7 @@
  */
 const axios = require('axios');
 const logger = require('./logger').price;
+const { Connection, PublicKey } = require('@solana/web3.js');
 const fileStorage = require('./fileStorage');
 require('dotenv').config();
 
@@ -281,37 +282,130 @@ const getMarketCap = async () => {
 };
 
 /**
+ * Get token supply information directly from the blockchain
+ * @returns {Promise<Object>} Supply information
+ */
+const getTokenSupplyFromChain = async () => {
+  try {
+    const connection = new Connection(process.env.SOLANA_RPC_URL);
+    const tokenMint = new PublicKey(process.env.TOKEN_ADDRESS);
+    
+    // Get token supply from chain
+    const tokenSupplyInfo = await connection.getTokenSupply(tokenMint);
+    
+    // Get burn address balance
+    const burnAddress = new PublicKey(process.env.BURN_ADDRESS || "1nc1nerator11111111111111111111111111111111");
+    const burnAccounts = await connection.getTokenAccountsByOwner(burnAddress, { mint: tokenMint });
+    
+    let burnedAmount = 0;
+    if (burnAccounts.value.length > 0) {
+      for (const account of burnAccounts.value) {
+        const accountInfo = await connection.getTokenAccountBalance(account.pubkey);
+        burnedAmount += accountInfo.value.uiAmount;
+      }
+    }
+    
+    // Log what we found
+    logger.info(`On-chain token data: 
+      - Total Supply: ${tokenSupplyInfo.value.uiAmount}
+      - Decimals: ${tokenSupplyInfo.value.decimals}
+      - Burned (in burn address): ${burnedAmount}
+    `);
+    
+    return {
+      totalSupply: tokenSupplyInfo.value.uiAmount,
+      circulatingSupply: tokenSupplyInfo.value.uiAmount - burnedAmount,
+      burnedAmount: burnedAmount
+    };
+  } catch (error) {
+    logger.error(`Error getting token supply from chain: ${error.message}`);
+    throw error;
+  }
+};
+
+/**
  * Get current circulating supply
  * @returns {Promise<Number>} Circulating supply
  */
 const getCirculatingSupply = async () => {
   try {
-    // Get from metrics (most accurate as it accounts for burns)
+    // Try to get actual on-chain data first
+    try {
+      const onChainData = await getTokenSupplyFromChain();
+      logger.info(`Using on-chain circulating supply: ${onChainData.circulatingSupply}`);
+      return onChainData.circulatingSupply;
+    } catch (chainError) {
+      logger.warn(`Couldn't get on-chain supply data: ${chainError.message}, falling back to records`);
+    }
+    
+    // If on-chain fails, try calculating from burn records
+    try {
+      const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+      const burns = fileStorage.readData(fileStorage.FILES.burns);
+      const totalBurned = burns.reduce((sum, burn) => sum + (burn.burnAmount || 0), 0);
+      
+      logger.info(`Calculated from burn records: Supply ${initialSupply}, Burns ${totalBurned}, Circulating ${initialSupply - totalBurned}`);
+      return initialSupply - totalBurned;
+    } catch (recordError) {
+      logger.warn(`Couldn't calculate from burn records: ${recordError.message}, falling back to metrics`);
+    }
+    
+    // If that fails too, use stored metrics (last resort)
     const metrics = fileStorage.findRecords('metrics', () => true, {
       sort: { field: 'timestamp', order: 'desc' },
       limit: 1
     });
     
     if (metrics.length > 0) {
+      logger.info(`Using stored metrics for circulating supply: ${metrics[0].circulatingSupply}`);
       return metrics[0].circulatingSupply;
     }
     
-    // Fallback calculation
+    // Ultimate fallback
     const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-    const reservePercent = 0.3; // 30% in reserve
-    
-    // Get total burned from burns collection
-    const burns = fileStorage.readData(fileStorage.FILES.burns);
-    const totalBurned = burns.reduce((sum, burn) => sum + burn.amount, 0);
-    
-    // Calculate circulating (excluding reserve and burns)
-    return initialSupply * (1 - reservePercent) - totalBurned;
+    logger.warn(`All methods failed, using default 70% of supply: ${initialSupply * 0.7}`);
+    return initialSupply * 0.7;
   } catch (error) {
     logger.error(`Error calculating circulating supply: ${error.message}`);
-    
-    // Fallback to simple calculation
     const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-    return initialSupply * 0.7; // Assume 70% circulating as fallback
+    return initialSupply * 0.7;
+  }
+};
+
+/**
+ * Update metrics with accurate on-chain data
+ */
+const updateMetricsFromChain = async () => {
+  try {
+    // Get on-chain data
+    const onChainData = await getTokenSupplyFromChain();
+    
+    // Get the latest metrics
+    const metrics = fileStorage.findRecords('metrics', () => true, {
+      sort: { field: 'timestamp', order: 'desc' },
+      limit: 1
+    });
+    
+    // Create updated metrics
+    const updatedMetrics = {
+      timestamp: new Date().toISOString(),
+      totalSupply: onChainData.totalSupply,
+      circulatingSupply: onChainData.circulatingSupply,
+      reserveWalletBalance: metrics.length > 0 ? metrics[0].reserveWalletBalance : 0,
+      totalBurned: onChainData.burnedAmount,
+      buybackBurned: metrics.length > 0 ? metrics[0].buybackBurned : 0,
+      milestoneBurned: metrics.length > 0 ? metrics[0].milestoneBurned : 0,
+      updatedFromChain: true
+    };
+    
+    // Save the updated metrics
+    fileStorage.saveRecord('metrics', updatedMetrics);
+    logger.info(`Updated metrics from chain data: Total Supply ${onChainData.totalSupply}, Circulating ${onChainData.circulatingSupply}, Burned ${onChainData.burnedAmount}`);
+    
+    return updatedMetrics;
+  } catch (error) {
+    logger.error(`Error updating metrics from chain: ${error.message}`);
+    throw error;
   }
 };
 

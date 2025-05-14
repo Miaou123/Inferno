@@ -2114,6 +2114,19 @@
     <script>
         // Tab switching
         document.addEventListener('DOMContentLoaded', function() {
+
+            setupCopyAddress();
+            setupStepHover();
+
+            getBurnAmount;
+
+            setTimeout(() => {
+                console.log("Running delayed updateTokenAddress...");
+                updateTokenAddress();
+            }, 500);
+                        
+            // Set up refresh interval (every 2 minutes)
+            setInterval(getBurnAmount, 120000);
             // Get tab elements
             const milestoneBurnTab = document.getElementById('milestone-burn-tab');
             const automatedBurnTab = document.getElementById('automated-burn-tab');
@@ -2228,9 +2241,9 @@
                 }
             }
             
-            // Page will be initialized by fetchBurnData
+            // Page will be initialized by getBurnAmount
             
-            // Progress bar will be initialized by fetchBurnData
+            // Progress bar will be initialized by getBurnAmount
             
             // Set up copy address functionality
             setupCopyAddress();
@@ -2260,7 +2273,7 @@
             if (refreshButton) {
                 refreshButton.addEventListener('click', function() {
                     // Refresh all data from API
-                    fetchBurnData();
+                    getBurnAmount();
                     
                     // Add a visual indicator that refresh is happening
                     refreshButton.classList.add('refreshing');
@@ -2284,50 +2297,193 @@
                     return value.toFixed(2);
                 }
             }
-            
-            // Fetch and update all real-time data - NO HARDCODED VALUES
-            async function fetchBurnData() {
+
+            async function fetchTokenAddress() {
                 try {
-                    // Fetch metrics data
-                    const metricsResponse = await fetch('/api/metrics');
-                    if (metricsResponse.ok) {
-                        const metricsData = await metricsResponse.json();
-                        console.log("Fetched metrics data:", metricsData);
-                        
-                        // Update contract address from API data
-                        if (metricsData.tokenAddress) {
-                            const contractAddressElement = document.getElementById('contract-address');
-                            if (contractAddressElement) {
-                                contractAddressElement.textContent = metricsData.tokenAddress;
-                            }
-                            
-                            // Update chart link with real token address
-                            const chartButton = document.querySelector('.hero-buttons .button:first-child');
-                            if (chartButton) {
-                                chartButton.href = `https://pump.fun/coin/${metricsData.tokenAddress}`;
-                            }
+                    const response = await fetch('/api/token-address');
+                    
+                    if (!response.ok) {
+                    console.error("Failed to fetch token address:", response.status);
+                    return null;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.tokenAddress) {
+                    console.log("Successfully fetched token address:", data.tokenAddress);
+                    return data.tokenAddress;
+                    } else {
+                    console.warn("No token address returned in response:", data);
+                    return null;
+                    }
+                } catch (error) {
+                    console.error("Error fetching token address:", error);
+                    return null;
+                }
+            }
+
+            async function getBurnAmount() {
+                try {
+                    const response = await fetch('/api/calculate-burn');
+                    
+                    if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                    console.log("Burn calculation from API:", data);
+                    
+                    // Update total burned display
+                    const totalBurnedElement = document.getElementById('total-burned');
+                    if (totalBurnedElement) {
+                        totalBurnedElement.textContent = Math.round(data.burnAmount).toLocaleString();
+                    }
+                    
+                    // Update progress bar
+                    const progressBar = document.getElementById('burn-progress');
+                    const percentageElement = document.getElementById('burn-percentage');
+                    
+                    if (progressBar) {
+                        progressBar.style.width = `${data.burnPercentage}%`;
+                    }
+                    
+                    if (percentageElement) {
+                        percentageElement.textContent = `${data.burnPercentage}%`;
+                    }
+                    
+                    return data;
+                    } else {
+                    console.error("API returned error:", data.error);
+                    return null;
+                    }
+                } catch (error) {
+                    console.error("Error fetching burn amount:", error);
+                    return null;
+                }
+                }
+
+
+            // Add this function to update UI with token address
+            async function updateTokenAddress() {
+                console.log("==== TOKEN ADDRESS DEBUG ====");
+                console.log("BEFORE FETCH - Current contract address in DOM:", document.getElementById('contract-address').textContent);
+                
+                const tokenAddress = await fetchTokenAddress();
+                console.log("Token address from API:", tokenAddress);
+                
+                // Update contract address display
+                const contractAddressElement = document.getElementById('contract-address');
+                if (contractAddressElement) {
+                    const oldValue = contractAddressElement.textContent;
+                    contractAddressElement.textContent = tokenAddress;
+                    console.log(`Updated contract address from [${oldValue}] to [${tokenAddress}]`);
+                }
+                
+                // Log the DOM value again
+                console.log("AFTER UPDATE - Current contract address in DOM:", document.getElementById('contract-address').textContent);
+                console.log("==========================");
+                }
+
+                async function fetchBurnStats() {
+                    try {
+                        const response = await fetch('/api/burn-stats');
+                        if (!response.ok) {
+                        throw new Error(`API returned ${response.status}`);
                         }
                         
-                        // Update total tokens burned from API data
+                        const data = await response.json();
+                        console.log("Burn stats from dedicated endpoint:", data);
+                        
+                        if (data.success) {
+                        // Update UI with burn stats
                         const totalBurnedElement = document.getElementById('total-burned');
-                        if (totalBurnedElement && metricsData.totalBurned !== undefined) {
-                            totalBurnedElement.textContent = metricsData.totalBurned.toLocaleString();
+                        if (totalBurnedElement) {
+                            totalBurnedElement.textContent = data.totalBurned.toLocaleString();
                         }
-                        
-                        // Calculate burn percentage from API data
-                        const initialSupply = 1000000000; // 1 billion total supply
-                        const burnPercentage = ((metricsData.totalBurned || 0) / initialSupply * 100).toFixed(2);
                         
                         const progressBar = document.getElementById('burn-progress');
                         const percentageElement = document.getElementById('burn-percentage');
                         
                         if (progressBar) {
-                            progressBar.style.width = `${burnPercentage}%`;
+                            progressBar.style.width = `${data.burnPercentage}%`;
                         }
                         
                         if (percentageElement) {
-                            percentageElement.textContent = `${burnPercentage}%`;
+                            percentageElement.textContent = `${data.burnPercentage}%`;
                         }
+                        
+                        return true;
+                        }
+                        
+                        return false;
+                    } catch (error) {
+                        console.error("Error fetching burn stats:", error);
+                        return false;
+                    }
+                    }
+
+            
+            // Fetch and update all real-time data - NO HARDCODED VALUES
+            async function getBurnAmount() {
+                try {
+                    // Fetch metrics data
+                    const metricsResponse = await fetch('/api/metrics');
+                    if (metricsResponse.ok) {
+                    const metricsData = await metricsResponse.json();
+                    console.log("=== BURN METRICS DEBUG ===");
+                    console.log("Fetched metrics data:", metricsData);
+                    
+                    // Update total tokens burned from API data
+                    const totalBurnedElement = document.getElementById('total-burned');
+                    if (totalBurnedElement) {
+                        console.log("Current total burned display:", totalBurnedElement.textContent);
+                        
+                        if (metricsData.totalBurned !== undefined) {
+                        console.log("Setting total burned to:", metricsData.totalBurned.toLocaleString());
+                        totalBurnedElement.textContent = metricsData.totalBurned.toLocaleString();
+                        } else {
+                        console.log("totalBurned is undefined in metrics data!");
+                        
+                        // Calculate it manually if missing
+                        const initialSupply = 1000000000; // 1 billion total supply
+                        const circulatingSupply = metricsData.circulatingSupply || 0;
+                        const calculatedBurned = initialSupply - circulatingSupply;
+                        
+                        console.log("Manual burn calculation:");
+                        console.log("- Initial Supply:", initialSupply);
+                        console.log("- Circulating Supply:", circulatingSupply);
+                        console.log("- Calculated Burned:", calculatedBurned);
+                        
+                        totalBurnedElement.textContent = calculatedBurned.toLocaleString();
+                        }
+                    } else {
+                        console.warn("Total burned element not found in DOM!");
+                    }
+                    
+                    // Calculate burn percentage from API data
+                    const initialSupply = 1000000000; // 1 billion total supply
+                    const burnAmount = metricsData.totalBurned !== undefined ? 
+                        metricsData.totalBurned : 
+                        (initialSupply - (metricsData.circulatingSupply || 0));
+                    
+                    const burnPercentage = (burnAmount / initialSupply * 100).toFixed(2);
+                    console.log("Burn percentage calculation:", burnAmount, "/", initialSupply, "=", burnPercentage, "%");
+                    
+                    const progressBar = document.getElementById('burn-progress');
+                    const percentageElement = document.getElementById('burn-percentage');
+                    
+                    if (progressBar) {
+                        console.log("Setting progress bar width to", burnPercentage, "%");
+                        progressBar.style.width = `${burnPercentage}%`;
+                    }
+                    
+                    if (percentageElement) {
+                        console.log("Setting percentage display to", burnPercentage, "%");
+                        percentageElement.textContent = `${burnPercentage}%`;
+                    }
+                    console.log("=== END BURN METRICS DEBUG ===");
                     }
                     
                     // Calculate market cap from price data - NEVER HARDCODED
@@ -2586,10 +2742,10 @@
             }
             
             // Fetch real data from the API
-            fetchBurnData();
+            getBurnAmount();
             
             // Auto-refresh every 2 minutes
-            setInterval(fetchBurnData, 120000);
+            setInterval(getBurnAmount, 120000);
         });
     </script>
 </body>
