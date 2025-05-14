@@ -47,13 +47,42 @@ const initializeStorage = () => {
 const readData = (filePath) => {
   try {
     if (!fs.existsSync(filePath)) {
+      console.log(`File not found: ${filePath}`);
       return [];
     }
     
+    // Get file stats to check modification time
+    const stats = fs.statSync(filePath);
+    const lastModified = new Date(stats.mtime);
+    
     const data = fs.readFileSync(filePath, 'utf8');
+    
+    // For burns.json specifically, log detailed debugging
+    if (filePath.includes('burns.json')) {
+      const fileName = path.basename(filePath);
+      console.log(`Reading ${fileName} (size: ${data.length} bytes, last modified: ${lastModified.toISOString()})`);
+      try {
+        const parsed = JSON.parse(data);
+        console.log(`${fileName} contains ${parsed.length} records`);
+        if (parsed.length > 0) {
+          // Log the first two records to verify content
+          console.log(`First record ID: ${parsed[0].id}, txHash: ${parsed[0].transactionHash}`);
+          if (parsed.length > 1) {
+            console.log(`Second record ID: ${parsed[1].id}, txHash: ${parsed[1].transactionHash}`);
+          }
+        }
+        return parsed;
+      } catch (parseError) {
+        console.error(`Error parsing ${fileName}: ${parseError.message}`);
+        console.log(`First 100 characters: ${data.substring(0, 100)}...`);
+        throw parseError;
+      }
+    }
+    
     return JSON.parse(data);
   } catch (error) {
     logger.error(`Error reading data from ${filePath}: ${error.message}`);
+    console.error(`Failed to read data from ${filePath}:`, error);
     return [];
   }
 };

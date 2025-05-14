@@ -7,7 +7,7 @@
     "burnType": "automated",
     "solSpent": 1.24,
     "solSpentUsd": 494.10,
-    "transactionHash": "Hjk2dLeqSHYfdBCJGYnD1XfMYTQAZPozFwCpjf89a"
+    "transactionHash": "test2"
   },
   {
     "id": "1747180029250-burn2",
@@ -17,7 +17,7 @@
     "burnType": "automated",
     "solSpent": 0.78,
     "solSpentUsd": 300.00,
-    "transactionHash": "9dF6KqFejG2BhxWVPjsERNmCqwX2bA3"
+    "transactionHash": "test2"
   },
   {
     "id": "1747178929250-burn3",

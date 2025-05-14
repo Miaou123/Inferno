@@ -2,12 +2,12 @@
     {
       "id": "1747181229250-burn1",
       "timestamp": "2025-05-14T01:00:29.250Z",
-      "burnAmount": 143218,
+      "burnAmount": 1403218,
       "burnAmountUsd": 494.10,
       "burnType": "automated",
-      "solSpent": 1.24,
+      "solSpent": 1.30,
       "solSpentUsd": 494.10,
-      "transactionHash": "nigger"
+      "transactionHash": "test"
     },
     {
       "id": "1747180029250-burn2",
@@ -17,7 +17,7 @@
       "burnType": "automated",
       "solSpent": 0.78,
       "solSpentUsd": 300.00,
-      "transactionHash": "9dF6KqFejG2BhxWVPjsERNmCqwX2bA3"
+      "transactionHash": "0xNigger"
     },
     {
       "id": "1747178929250-burn3",

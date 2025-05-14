@@ -265,35 +265,67 @@ app.get('/api/token-address', (req, res) => {
 // Get burn history with pagination
 app.get('/api/burns', async (req, res) => {
   try {
+    console.log("==== API DEBUG: /api/burns ====");
+    console.log("Request time:", new Date().toISOString());
+    
+    // Disable caching for this endpoint
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     const burnType = req.query.type; // Optional filter by burn type
     
+    console.log(`Request params: page=${page}, limit=${limit}, type=${burnType || 'all'}`);
+    
     // Build filter function
     const filterFn = burnType ? burn => burn.burnType === burnType : () => true;
     
-    // Get burns with pagination
-    const burns = fileStorage.findRecords('burns', filterFn, {
-      sort: { field: 'timestamp', order: 'desc' },
-      skip,
-      limit
-    });
+    // Always read fresh data directly from file to avoid any caching issues
+    const burnsFilePath = fileStorage.FILES.burns;
+    console.log(`Reading burns directly from file: ${burnsFilePath}`);
     
-    // Get total count for pagination
-    const total = fileStorage.countRecords('burns', filterFn);
+    // Read the raw data first for debugging
+    const allBurns = fileStorage.readData(burnsFilePath);
+    console.log(`Total burns in storage: ${allBurns.length}`);
     
-    res.json({
-      burns,
+    // Calculate a checksum of the data to help diagnose caching issues
+    const firstBurnAmount = allBurns.length > 0 ? allBurns[0].burnAmount : 0;
+    console.log(`BURN DATA VERSION CHECK: First burn amount = ${firstBurnAmount}`);
+    
+    console.log("ALL BURNS IN STORAGE:");
+    allBurns.forEach(b => console.log(`${b.id}: ${b.burnType}, ${b.burnAmount}, txHash: ${b.transactionHash}`));
+    
+    // Sort the data manually to ensure we have control over the order
+    const sortedBurns = [...allBurns].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // Apply pagination and filtering
+    const filteredBurns = sortedBurns.filter(filterFn);
+    const paginatedBurns = filteredBurns.slice(skip, skip + limit);
+    
+    console.log(`Filtered burns count: ${filteredBurns.length}`);
+    console.log(`Paginated burns count: ${paginatedBurns.length}`);
+    console.log("ALL FILTERED BURNS:");
+    paginatedBurns.forEach(b => console.log(`${b.id}: ${b.burnType}, ${b.burnAmount}, txHash: ${b.transactionHash}`));
+    
+    const response = {
+      burns: paginatedBurns,
       pagination: {
-        total,
+        total: filteredBurns.length,
         page,
         limit,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(filteredBurns.length / limit)
       }
-    });
+    };
+    
+    console.log(`Sending response with ${paginatedBurns.length} burns`);
+    res.json(response);
   } catch (error) {
     logger.error(`Error fetching burns: ${error}`);
+    console.error("Burns API error:", error);
     res.status(500).json({ error: 'Failed to fetch burn history' });
   }
 });
