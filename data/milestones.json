@@ -45,28 +45,28 @@
       "marketCap": 1000000,
       "burnAmount": 15000000,
       "percentOfSupply": 1.50,
-      "completed": false
+      "completed": true
     },
     {
       "id": "milestone-1.5m",
       "marketCap": 1500000,
       "burnAmount": 12500000,
       "percentOfSupply": 1.25,
-      "completed": false
+      "completed": true
     },
     {
       "id": "milestone-2.5m",
       "marketCap": 2500000,
       "burnAmount": 12500000,
       "percentOfSupply": 1.25,
-      "completed": false
+      "completed": true
     },
     {
       "id": "milestone-3.5m",
       "marketCap": 3500000,
       "burnAmount": 10000000,
       "percentOfSupply": 1.00,
-      "completed": false
+      "completed": true
     },
     {
       "id": "milestone-5m",
