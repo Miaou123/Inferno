@@ -77,14 +77,71 @@
             cursor: pointer;
             transition: all 0.3s;
             font-size: 14px;
+            position: relative;
+            overflow: hidden;
         }
         
         .refresh-button:hover {
             background: rgba(255, 69, 0, 0.2);
         }
         
+        .refresh-button:hover .refresh-icon {
+            animation: spin 1.5s ease-in-out;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .refresh-button:hover .button-flame {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
         .refresh-icon {
             margin-right: 8px;
+            transition: transform 0.3s ease;
+        }
+        
+        .button-flame {
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(to right, 
+                rgba(255, 69, 0, 0.7), 
+                rgba(255, 140, 0, 0.7), 
+                rgba(255, 204, 0, 0.7), 
+                rgba(255, 140, 0, 0.7),
+                rgba(255, 69, 0, 0.7)
+            );
+            filter: blur(2px);
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.3s ease;
+            border-radius: 0 0 4px 4px;
+        }
+        
+        .button-flame::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right,
+                rgba(255, 204, 0, 0.3),
+                rgba(255, 69, 0, 0.3),
+                rgba(255, 204, 0, 0.3)
+            );
+            animation: flameShimmer 2s infinite linear;
+        }
+        
+        @keyframes flameShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
         }
         
         /* Nav menu */
@@ -232,6 +289,70 @@
             margin-left: 8px;
         }
         
+        /* Contract Display in Hero Section */
+        .contract-display {
+            margin-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .contract-address {
+            background-color: rgba(255, 69, 0, 0.1);
+            border: 1px solid rgba(255, 69, 0, 0.3);
+            border-radius: 50px;
+            padding: 10px 30px;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: auto;
+            max-width: 90%;
+            position: relative;
+            overflow: hidden;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .contract-address:hover {
+            background-color: rgba(255, 69, 0, 0.15);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .copy-icon {
+            margin-left: 10px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.3s;
+            font-size: 16px;
+        }
+        
+        .copy-icon:hover {
+            color: var(--accent-primary);
+            transform: scale(1.1);
+        }
+        
+        .verified-tag {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 4px 12px;
+            border-radius: 50px;
+        }
+        
+        .verified-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-primary);
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite alternate;
+        }
+        
         /* Section styles */
         .section {
             margin-bottom: 80px;
@@ -353,6 +474,7 @@
             width: 0;
             transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
             position: relative;
+            overflow: hidden;
         }
         
         .progress-bar::after {
@@ -370,6 +492,53 @@
             );
             animation: shimmer 2s infinite;
             transform: translateX(-100%);
+        }
+        
+        .progress-fire-effect {
+            position: absolute;
+            top: -2px;
+            right: -10px;
+            bottom: -2px;
+            width: 15px;
+            background: radial-gradient(ellipse at center, rgba(255, 204, 0, 0.8) 0%, rgba(255, 69, 0, 0.4) 60%, transparent 100%);
+            filter: blur(3px);
+            border-radius: 50%;
+            opacity: 0.9;
+            animation: fireGlow 0.5s infinite alternate;
+        }
+        
+        .progress-fire-effect::before, .progress-fire-effect::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center, rgba(255, 204, 0, 0.8) 0%, rgba(255, 140, 0, 0.6) 50%, transparent 100%);
+            filter: blur(2px);
+            animation: fireParticles 2s infinite;
+        }
+        
+        .progress-fire-effect::before {
+            top: -10px;
+            right: 2px;
+            transform-origin: center bottom;
+        }
+        
+        .progress-fire-effect::after {
+            bottom: -10px;
+            right: 3px;
+            transform-origin: center top;
+        }
+        
+        @keyframes fireGlow {
+            0% { opacity: 0.7; width: 15px; }
+            100% { opacity: 1; width: 18px; }
+        }
+        
+        @keyframes fireParticles {
+            0% { transform: translateY(0) scale(1); opacity: 0.8; }
+            50% { transform: translateY(-10px) scale(0.6); opacity: 0.6; }
+            100% { transform: translateY(-20px) scale(0.2); opacity: 0; }
         }
         
         @keyframes shimmer {
@@ -554,6 +723,87 @@
             background: var(--accent-primary);
             border-color: var(--accent-secondary);
             box-shadow: 0 0 10px rgba(255, 69, 0, 0.7);
+        }
+        
+        .animated-flame {
+            width: 24px;
+            height: 24px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .milestone-marker.key .animated-flame {
+            width: 28px;
+            height: 28px;
+        }
+        
+        .flame-particle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: radial-gradient(
+                circle at 60% 80%, 
+                #FFCC00 0%, 
+                #FF8C00 50%, 
+                #FF4500 100%
+            );
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            filter: blur(0.5px);
+            transform-origin: center bottom;
+            animation: flameAnimation 2s infinite;
+            opacity: 0.9;
+            box-shadow: 0 0 10px rgba(255, 69, 0, 0.7);
+        }
+
+        .milestone-marker.key .flame-particle {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .flame-particle:nth-child(1) {
+            width: 18px;
+            height: 18px;
+            z-index: 3;
+            animation-delay: -0.5s;
+        }
+        
+        .flame-particle:nth-child(2) {
+            width: 14px;
+            height: 14px;
+            transform: translateX(-4px) translateY(2px);
+            z-index: 1;
+            animation-delay: -1s;
+            opacity: 0.7;
+        }
+        
+        .flame-particle:nth-child(3) {
+            width: 14px;
+            height: 14px;
+            transform: translateX(4px) translateY(2px);
+            z-index: 2;
+            animation-delay: -1.5s;
+            opacity: 0.7;
+        }
+        
+        @keyframes flameAnimation {
+            0%, 100% {
+                transform: scale(1) rotate(-2deg);
+                border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            }
+            25% {
+                transform: scale(1.1, 1.2) rotate(2deg);
+                border-radius: 40% 60% 50% 50% / 60% 60% 40% 40%;
+            }
+            50% {
+                transform: scale(0.9, 1.1) rotate(-1deg);
+                border-radius: 50% 50% 40% 60% / 40% 60% 50% 60%;
+            }
+            75% {
+                transform: scale(1.05, 0.95) rotate(1deg);
+                border-radius: 60% 40% 50% 50% / 60% 40% 60% 40%;
+            }
         }
 
         .milestone-marker.next .dot {
@@ -786,6 +1036,32 @@
             color: #888;
         }
         
+        .tx-hash a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            padding: 2px 6px;
+            border-radius: 4px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tx-hash a:hover {
+            color: var(--accent-primary);
+            background: rgba(255, 69, 0, 0.1);
+        }
+        
+        .tx-icon {
+            font-size: 10px;
+            opacity: 0.7;
+            position: relative;
+            top: -1px;
+        }
+        
+        .tx-hash a:hover .tx-icon {
+            opacity: 1;
+        }
+        
         .burn-amount {
             color: var(--accent-primary);
             font-weight: 600;
@@ -811,6 +1087,34 @@
             height: 2px;
             background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
             z-index: 1;
+        }
+        
+        /* New enhanced mechanism description styles */
+        .burn-feature {
+            color: #ff4500;
+            font-weight: bold;
+        }
+        
+        .mechanism-description p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .mechanism-description .feature-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .mechanism-description .feature-box.primary {
+            background-color: rgba(255, 69, 0, 0.05);
+            border-left: 3px solid #ff4500;
+        }
+        
+        .mechanism-description .feature-box.secondary {
+            background-color: rgba(255, 140, 0, 0.05);
+            border-left: 3px solid #ff8c00;
         }
         
         .steps-container {
@@ -1075,77 +1379,41 @@
             line-height: 1.6;
         }
         
+        .burn-wallet {
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background-color: rgba(255, 69, 0, 0.1);
+            border-radius: 4px;
+            padding: 5px 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: break-all;
+            color: var(--accent-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .burn-wallet:hover {
+            background-color: rgba(255, 69, 0, 0.2);
+            transform: translateY(-2px);
+        }
+        
         /* Footer styles */
         .footer-container {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            justify-content: center;
+            align-items: center;
             margin-bottom: 40px;
-            gap: 60px;
+            text-align: center;
         }
         
-        .footer-left {
-            flex: 1;
+        .footer-content {
+            max-width: 600px;
         }
         
-        .footer-right {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        
-        .contract-address {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 15px;
-            font-family: 'Courier New', monospace;
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            width: 100%;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .contract-address::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
-            z-index: 1;
-        }
-        
-        .copy-icon {
-            margin-left: 15px;
-            cursor: pointer;
-            color: var(--text-secondary);
-            transition: color 0.3s;
-            font-size: 18px;
-        }
-        
-        .copy-icon:hover {
-            color: var(--accent-primary);
-        }
-        
-        .verified-tag {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        
-        .verified-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--accent-primary);
-            border-radius: 50%;
-            margin-right: 8px;
-        }
+        /* Social media links */
+        /* Social links section */
         
         .copyright {
             font-size: 14px;
@@ -1159,10 +1427,17 @@
             margin-bottom: 30px;
         }
         
+        .follow-socials {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin: 15px 0;
+        }
+        
         .social-links {
             display: flex;
+            justify-content: center;
             gap: 15px;
-            margin-top: 20px;
+            margin: 20px 0;
         }
         
         .social-link {
@@ -1272,9 +1547,31 @@
         <header>
             <div class="logo-small">
                 <svg width="30" height="30" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="#FF4500" stroke-width="2" />
-                    <path d="M50 20 L70 40 L60 70 L40 70 L30 40 Z" fill="#FF4500" />
-                    <circle cx="50" cy="50" r="5" fill="#FFCC00" />
+                    <defs>
+                        <linearGradient id="headerFlameGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#FF4500" />
+                            <stop offset="50%" style="stop-color:#FF8C00" />
+                            <stop offset="100%" style="stop-color:#FFCC00" />
+                        </linearGradient>
+                        <filter id="headerGlow" x="-30%" y="-30%" width="160%" height="160%">
+                            <feGaussianBlur stdDeviation="2" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                    </defs>
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="url(#headerFlameGradient)" stroke-width="2" />
+                    <path d="M50 20 L70 40 L60 70 L40 70 L30 40 Z" fill="url(#headerFlameGradient)" filter="url(#headerGlow)" />
+                    <path d="M50 25 C60 32, 65 40, 60 55 C55 70, 45 70, 40 55 C35 40, 40 32, 50 25" 
+                          fill="url(#headerFlameGradient)" opacity="0.7">
+                        <animate attributeName="d" 
+                               values="M50 25 C60 32, 65 40, 60 55 C55 70, 45 70, 40 55 C35 40, 40 32, 50 25;
+                                      M50 25 C62 34, 67 42, 60 57 C53 72, 47 72, 40 57 C33 42, 38 34, 50 25;
+                                      M50 25 C60 32, 65 40, 60 55 C55 70, 45 70, 40 55 C35 40, 40 32, 50 25" 
+                               dur="3s" 
+                               repeatCount="indefinite" />
+                    </path>
+                    <circle cx="50" cy="50" r="6" fill="#FFCC00" filter="url(#headerGlow)">
+                        <animate attributeName="r" values="6;7;6" dur="2s" repeatCount="indefinite" />
+                    </circle>
                 </svg>
                 <span>$INFERNO</span>
             </div>
@@ -1285,7 +1582,8 @@
             </div>
             <button class="refresh-button" id="refresh-data">
                 <span class="refresh-icon">↻</span>
-                Refresh Data
+                <span class="refresh-text">Refresh Data</span>
+                <span class="button-flame"></span>
             </button>
         </header>
         
@@ -1301,27 +1599,74 @@
                             <stop offset="50%" style="stop-color:#FF8C00" />
                             <stop offset="100%" style="stop-color:#FFCC00" />
                         </linearGradient>
+                        <linearGradient id="flameGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FF4500" />
+                            <stop offset="70%" style="stop-color:#FF8C00" />
+                            <stop offset="100%" style="stop-color:#FFCC00" />
+                        </linearGradient>
                         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                             <feGaussianBlur stdDeviation="5" result="blur" />
                             <feComposite in="SourceGraphic" in2="blur" operator="over" />
                         </filter>
+                        <filter id="fireFilter" x="-50%" y="-50%" width="200%" height="200%">
+                            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="noise" />
+                            <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+                            <feGaussianBlur stdDeviation="2" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
                     </defs>
                     <circle cx="100" cy="100" r="90" fill="none" stroke="url(#flameGradient)" stroke-width="3" />
+                    
+                    <!-- Base flame -->
                     <path d="M100 40 L140 80 L120 140 L80 140 L60 80 Z" fill="url(#flameGradient)" filter="url(#glow)" />
-                    <circle cx="100" cy="100" r="10" fill="#FFCC00" filter="url(#glow)" />
+                    
+                    <!-- Outer flame layers -->
+                    <path d="M100 35 C120 45, 130 70, 120 100 C110 140, 90 140, 80 100 C70 70, 80 45, 100 35" 
+                          fill="url(#flameGradient2)" opacity="0.7" filter="url(#fireFilter)">
+                        <animate attributeName="d" 
+                                 values="M100 35 C120 45, 130 70, 120 100 C110 140, 90 140, 80 100 C70 70, 80 45, 100 35;
+                                        M100 35 C125 50, 135 75, 120 105 C105 145, 95 145, 80 105 C65 75, 75 50, 100 35;
+                                        M100 35 C120 45, 130 70, 120 100 C110 140, 90 140, 80 100 C70 70, 80 45, 100 35" 
+                                 dur="3s" 
+                                 repeatCount="indefinite" />
+                    </path>
+                    
+                    <!-- Inner flame details -->
+                    <path d="M100 50 L115 80 L105 125 L95 125 L85 80 Z" fill="#FFCC00" opacity="0.9" filter="url(#glow)">
+                        <animate attributeName="d" 
+                                 values="M100 50 L115 80 L105 125 L95 125 L85 80 Z;
+                                        M100 50 L120 85 L105 130 L95 130 L80 85 Z;
+                                        M100 50 L115 80 L105 125 L95 125 L85 80 Z" 
+                                 dur="2.5s" 
+                                 repeatCount="indefinite" />
+                    </path>
+                    
+                    <!-- Center ember -->
+                    <circle cx="100" cy="100" r="12" fill="#FFCC00" filter="url(#glow)">
+                        <animate attributeName="r" values="12;14;12" dur="2s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="1;0.8;1" dur="2s" repeatCount="indefinite" />
+                    </circle>
                 </svg>
             </div>
             <h1 class="token-name">$INFERNO</h1>
             <p class="slogan">BURN PROTOCOL ACTIVATED</p>
             <div class="hero-buttons">
                 <a href="#" class="button">
-                    TRADE NOW
+                    CHART
                     <span class="button-icon">↗</span>
                 </a>
                 <a href="#metrics" class="button button-outline">
                     VIEW BURNS
                     <span class="button-icon">↓</span>
                 </a>
+            </div>
+            
+            <!-- Contract Address Display -->
+            <div class="contract-display">
+                <div class="contract-address">
+                    <span id="contract-address">HJZn2a3YK1LTBCRDsX92cTtmXw6puh88JbZMGpEinfr</span>
+                    <span class="copy-icon" id="copy-address">📋</span>
+                </div>
             </div>
         </section>
         
@@ -1339,7 +1684,9 @@
                 <div class="burn-value" id="total-burned">122,503,892</div>
                 <div class="progress-container">
                     <div class="progress-bar-bg">
-                        <div class="progress-bar" id="burn-progress" style="width: 12.25%"></div>
+                        <div class="progress-bar" id="burn-progress" style="width: 12.25%">
+                            <div class="progress-fire-effect"></div>
+                        </div>
                     </div>
                     <div class="progress-info">
                         <div>0</div>
@@ -1399,7 +1746,11 @@
 
                             <!-- Key milestone markers -->
                             <div class="milestone-marker completed key" style="left: 0%">
-                                <span class="flame">🔥</span>
+                                <div class="animated-flame">
+                                    <div class="flame-particle"></div>
+                                    <div class="flame-particle"></div>
+                                    <div class="flame-particle"></div>
+                                </div>
                                 <div class="milestone-tooltip">
                                     <div class="tooltip-title">$100K</div>
                                     <div class="tooltip-detail">
@@ -1428,7 +1779,11 @@
                             
                             <!-- Intermediate milestones (just a few examples) -->
                             <div class="milestone-marker completed" style="left: 8%">
-                                <span class="flame">🔥</span>
+                                <div class="animated-flame">
+                                    <div class="flame-particle"></div>
+                                    <div class="flame-particle"></div>
+                                    <div class="flame-particle"></div>
+                                </div>
                                 <div class="milestone-tooltip">
                                     <div class="tooltip-title">$200K</div>
                                     <div class="tooltip-detail">
@@ -1439,7 +1794,11 @@
                             </div>
                             
                             <div class="milestone-marker completed" style="left: 14%">
-                                <span class="flame">🔥</span>
+                                <div class="animated-flame">
+                                    <div class="flame-particle"></div>
+                                    <div class="flame-particle"></div>
+                                    <div class="flame-particle"></div>
+                                </div>
                                 <div class="milestone-tooltip">
                                     <div class="tooltip-title">$300K</div>
                                     <div class="tooltip-detail">
@@ -1586,31 +1945,31 @@
                             <tbody>
                                 <tr>
                                     <td>5 mins ago</td>
-                                    <td class="tx-hash">Hjk2...f89a</td>
+                                    <td class="tx-hash"><a href="https://solscan.io/tx/Hjk2dLeqSHYfdBCJGYnD1XfMYTQAZPozFwCpjf89a" target="_blank" rel="noopener noreferrer">Hjk2...f89a <span class="tx-icon">↗</span></a></td>
                                     <td>1.24 SOL</td>
                                     <td class="burn-amount">143,218 INFERNO</td>
                                 </tr>
                                 <tr>
                                     <td>23 mins ago</td>
-                                    <td class="tx-hash">9dF6...2bA3</td>
+                                    <td class="tx-hash"><a href="https://solscan.io/tx/9dF6KqFejG2BhxWVPjsERNmCqwX2bA3" target="_blank" rel="noopener noreferrer">9dF6...2bA3 <span class="tx-icon">↗</span></a></td>
                                     <td>0.78 SOL</td>
                                     <td class="burn-amount">89,574 INFERNO</td>
                                 </tr>
                                 <tr>
                                     <td>41 mins ago</td>
-                                    <td class="tx-hash">L0q7...93cD</td>
+                                    <td class="tx-hash"><a href="https://solscan.io/tx/L0q7PwXjN53TcrQmLFZ7J93cD" target="_blank" rel="noopener noreferrer">L0q7...93cD <span class="tx-icon">↗</span></a></td>
                                     <td>1.12 SOL</td>
                                     <td class="burn-amount">125,905 INFERNO</td>
                                 </tr>
                                 <tr>
                                     <td>59 mins ago</td>
-                                    <td class="tx-hash">X3r9...0pE2</td>
+                                    <td class="tx-hash"><a href="https://solscan.io/tx/X3r9MnpDFE7wQ2jKsN0pE2" target="_blank" rel="noopener noreferrer">X3r9...0pE2 <span class="tx-icon">↗</span></a></td>
                                     <td>0.65 SOL</td>
                                     <td class="burn-amount">76,332 INFERNO</td>
                                 </tr>
                                 <tr>
                                     <td>1 hour ago</td>
-                                    <td class="tx-hash">8Hj4...k3F7</td>
+                                    <td class="tx-hash"><a href="https://solscan.io/tx/8Hj4PqwZnMmR7Xc9k3F7" target="_blank" rel="noopener noreferrer">8Hj4...k3F7 <span class="tx-icon">↗</span></a></td>
                                     <td>1.46 SOL</td>
                                     <td class="burn-amount">168,711 INFERNO</td>
                                 </tr>
@@ -1623,49 +1982,63 @@
         
         <!-- Protocol Mechanism section -->
         <section class="section" id="protocol">
-            <h2 class="section-title">THE INFERNO PROTOCOL</h2>
+            <h2 class="section-title" style="text-transform: uppercase; font-weight: 600; letter-spacing: 1px;">THE INFERNO PROTOCOL</h2>
             <div class="protocol-mechanism">
-                <div class="steps-container">
-                    <div class="timeline">
-                        <span class="timeline-dot" style="left: 0%"></span>
-                        <span class="timeline-dot" style="left: 25%"></span>
-                        <span class="timeline-dot" style="left: 50%"></span>
-                        <span class="timeline-dot active" style="left: 75%"></span>
-                        <span class="timeline-dot" style="left: 100%"></span>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">📊</div>
-                        <div class="step-title">Volume</div>
-                        <div class="step-description">Trading generates volume and fees</div>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">💰</div>
-                        <div class="step-title">Collect</div>
-                        <div class="step-description">Creator rewards accumulate in SOL</div>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">🔄</div>
-                        <div class="step-title">Buyback</div>
-                        <div class="step-description">SOL rewards buy $INFERNO tokens</div>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon active">🔥</div>
-                        <div class="step-title">Burn</div>
-                        <div class="step-description">Tokens permanently removed</div>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">📈</div>
-                        <div class="step-title">Repeat</div>
-                        <div class="step-description">Continuous loop creates scarcity</div>
-                    </div>
+              <div class="steps-container">
+                <div class="timeline">
+                  <span class="timeline-dot" style="left: 0%"></span>
+                  <span class="timeline-dot" style="left: 20%"></span>
+                  <span class="timeline-dot" style="left: 40%"></span>
+                  <span class="timeline-dot active" style="left: 60%"></span>
+                  <span class="timeline-dot" style="left: 80%"></span>
+                  <span class="timeline-dot" style="left: 100%"></span>
                 </div>
-                <p class="mechanism-description">
-                    The INFERNO Protocol leverages pump.fun's creator revenue sharing to fuel a perpetual burn cycle. 
-                    Every trade generates rewards that are automatically claimed, used to buy back tokens, and then 
-                    burned—creating an unstoppable deflationary loop that increases scarcity over time.
+                <div class="step">
+                  <div class="step-icon">📈</div>
+                  <div class="step-title">Volume</div>
+                  <div class="step-description">Trading generates volume and fees</div>
+                </div>
+                <div class="step">
+                  <div class="step-icon">💎</div>
+                  <div class="step-title">Collect</div>
+                  <div class="step-description">Creator rewards accumulate in SOL</div>
+                </div>
+                <div class="step">
+                  <div class="step-icon">↻</div>
+                  <div class="step-title">Buyback</div>
+                  <div class="step-description">SOL rewards buy $INFERNO tokens</div>
+                </div>
+                <div class="step">
+                  <div class="step-icon active" style="box-shadow: 0 0 15px rgba(255, 69, 0, 0.25);">🔥</div>
+                  <div class="step-title" style="color: #ff4500;">Burn</div>
+                  <div class="step-description">Tokens permanently removed</div>
+                </div>
+                <div class="step">
+                  <div class="step-icon">📊</div>
+                  <div class="step-title">Growth</div>
+                  <div class="step-description">Market cap increases</div>
+                </div>
+                <div class="step">
+                  <div class="step-icon">⭐</div>
+                  <div class="step-title">Milestones</div>
+                  <div class="step-description">Trigger major burns</div>
+                </div>
+              </div>
+              <div class="mechanism-description">
+                <p>
+                    The INFERNO Protocol features <strong style="color: #ffffff">dual burn mechanisms</strong> for maximum deflationary pressure:
                 </p>
+                
+                <div class="feature-box primary">
+                    <span class="burn-feature">1️⃣ Automated Buyback & Burn:</span> Leverages pump.fun's creator revenue sharing to fuel a perpetual burn cycle. Every trade generates rewards that are automatically claimed, used to buy back tokens, and then burned—creating an unstoppable deflationary loop.
+                </div>
+                
+                <div class="feature-box secondary">
+                    <span style="color: #ff8c00; font-weight: bold">2️⃣ Milestone Burns:</span> Major token burns are triggered when specific market cap thresholds are reached, from $100K to $100M. These milestone burns will ultimately consume 30% of the total supply, creating significant supply shocks as the token grows.
+                </div>
             </div>
-        </section>
+            </div>
+          </section>
         
         <!-- Tokenomics section -->
         <section class="section" id="tokenomics">
@@ -1675,32 +2048,29 @@
                     <div class="tokenomics-icon">🔍</div>
                     <div class="tokenomics-title">1B Fixed Supply</div>
                     <div class="tokenomics-description">
-                        Capped total supply of 1 billion tokens with no ability to mint additional tokens.
-                        Supply can only decrease through the burn protocol.
+                        Capped total supply with no minting capability - only burns.
+                    </div>
+                </div>
+                <div class="tokenomics-card">
+                    <div class="tokenomics-icon">🔥</div>
+                    <div class="tokenomics-title">30% Burn Wallet</div>
+                    <div class="tokenomics-description">
+                        30% of tokens allocated to burn wallet for milestone unlocks.
+                        <div class="burn-wallet">3BurnWalletAddressSol123456789abcdefghi</div>
                     </div>
                 </div>
                 <div class="tokenomics-card">
                     <div class="tokenomics-icon">💸</div>
                     <div class="tokenomics-title">Zero Tax</div>
                     <div class="tokenomics-description">
-                        No transaction fees or taxes on trades, enabling high trading volume
-                        and creating a frictionless trading experience.
+                        No transaction fees or taxes - pure trading experience.
                     </div>
                 </div>
                 <div class="tokenomics-card">
-                    <div class="tokenomics-icon">🌐</div>
-                    <div class="tokenomics-title">Community Owned</div>
+                    <div class="tokenomics-icon">♾️</div>
+                    <div class="tokenomics-title">Automated Burn Loop</div>
                     <div class="tokenomics-description">
-                        Fair distribution with no team allocation. 100% of tokens are
-                        available to the community, ensuring decentralized ownership.
-                    </div>
-                </div>
-                <div class="tokenomics-card">
-                    <div class="tokenomics-icon">🔥</div>
-                    <div class="tokenomics-title">Perpetual Burns</div>
-                    <div class="tokenomics-description">
-                        Automated burning mechanism powered by creator rewards from pump.fun, creating
-                        sustainable deflationary pressure without any manual intervention.
+                        Creator rewards automatically bought back and burned.
                     </div>
                 </div>
             </div>
@@ -1709,38 +2079,15 @@
         <!-- Footer section -->
         <section class="section">
             <div class="footer-container">
-                <div class="footer-left">
+                <div class="footer-content">
                     <div class="join-section">
                         <h2 class="section-title">JOIN THE INFERNO</h2>
-                        <div class="disclaimer">
-                            Connect with our community and be part of the fastest-growing deflationary token on Solana.
-                            Follow our socials to stay updated on burn statistics and upcoming developments.
-                        </div>
+                        <p class="follow-socials">Follow our socials to stay updated on burn statistics</p>
                         <div class="social-links">
                             <a href="#" class="social-link">𝕏</a>
-                            <a href="#" class="social-link">𝕋</a>
-                            <a href="#" class="social-link">𝔻</a>
-                            <a href="#" class="social-link">𝔾</a>
                         </div>
                         <p class="copyright">© 2025 INFERNO Protocol. All rights reserved.</p>
                         <p class="disclaimer">This website is not financial advice. $INFERNO has no intrinsic value.</p>
-                    </div>
-                </div>
-                <div class="footer-right">
-                    <h2 class="section-title">CONTRACT</h2>
-                    <div class="contract-address">
-                        <span id="contract-address">HJZn2a3YK1LTBCRDsX92cTtmXw6puh88JbZMGpEinfr</span>
-                        <span class="copy-icon" id="copy-address">📋</span>
-                    </div>
-                    <div class="verified-tag">
-                        <span class="verified-dot"></span>
-                        <span>Verified on Solscan</span>
-                    </div>
-                    <div class="hero-buttons">
-                        <a href="#" class="button">
-                            TRADE NOW
-                            <span class="button-icon">↗</span>
-                        </a>
                     </div>
                 </div>
             </div>
@@ -1818,18 +2165,46 @@
             function setupStepHover() {
                 const steps = document.querySelectorAll('.step');
                 const timelineDots = document.querySelectorAll('.timeline-dot');
+                const stepIcons = document.querySelectorAll('.step-icon');
+                const stepTitles = document.querySelectorAll('.step-title');
                 
                 if (steps.length > 0 && timelineDots.length > 0) {
+                    // Remove all active classes initially except for default
+                    timelineDots.forEach((dot, idx) => {
+                        if (idx !== 3) { // Only keep the Burn dot active by default
+                            dot.classList.remove('active');
+                        }
+                    });
+                    
+                    // Set up hover effects for each step
                     steps.forEach((step, index) => {
                         if (index < timelineDots.length) {
+                            // On hover
                             step.addEventListener('mouseenter', () => {
+                                // Activate the timeline dot
+                                timelineDots.forEach(dot => dot.classList.remove('active'));
                                 timelineDots[index].classList.add('active');
+                                
+                                // Highlight step
+                                stepIcons[index].style.borderColor = '#ff4500';
+                                stepIcons[index].style.backgroundColor = 'rgba(255, 69, 0, 0.1)';
+                                stepIcons[index].style.boxShadow = '0 0 15px rgba(255, 69, 0, 0.25)';
+                                stepTitles[index].style.color = '#ff4500';
                             });
                             
+                            // On hover out
                             step.addEventListener('mouseleave', () => {
-                                if (index !== 3) { // Keep the "Burn" dot active
+                                // Reset to default state
+                                if (index !== 3) { // Keep the "Burn" dot and step active
                                     timelineDots[index].classList.remove('active');
+                                    stepIcons[index].style.borderColor = '';
+                                    stepIcons[index].style.backgroundColor = '';
+                                    stepIcons[index].style.boxShadow = '';
+                                    stepTitles[index].style.color = '';
                                 }
+                                
+                                // Restore default active state
+                                timelineDots[3].classList.add('active');
                             });
                         }
                     });
@@ -1851,6 +2226,23 @@
             
             // Set up copy address functionality
             setupCopyAddress();
+            
+            // Set up burn wallet copy functionality
+            const burnWalletElement = document.querySelector('.burn-wallet');
+            if (burnWalletElement) {
+                burnWalletElement.addEventListener('click', () => {
+                    const address = burnWalletElement.textContent;
+                    navigator.clipboard.writeText(address).then(() => {
+                        const originalText = burnWalletElement.textContent;
+                        burnWalletElement.textContent = "Copied!";
+                        burnWalletElement.style.color = "#4CAF50";
+                        setTimeout(() => {
+                            burnWalletElement.textContent = originalText;
+                            burnWalletElement.style.color = "";
+                        }, 2000);
+                    });
+                });
+            }
             
             // Set up step hover effects
             setupStepHover();
