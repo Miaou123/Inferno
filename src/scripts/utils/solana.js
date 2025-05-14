@@ -143,8 +143,8 @@ const burnTokens = async (
     const connection = getConnection();
     const tokenPublicKey = new PublicKey(tokenAddress);
     
-    // Use standard Solana burn address
-    const burnAddress = "1nc1nerator11111111111111111111111111111111";
+    // Use burn address from environment or fall back to standard address
+    const burnAddress = process.env.BURN_ADDRESS || "1nc1nerator11111111111111111111111111111111";
     const destinationPublicKey = new PublicKey(burnAddress);
     
     // Create token object
