@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@solana/spl-token": "^0.3.8",
-    "@solana/web3.js": "^1.78.0",
+    "@solana/web3.js": "^1.98.2",
     "axios": "^1.5.0",
     "bs58": "^5.0.0",
     "concurrently": "^8.2.0",

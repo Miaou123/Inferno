@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "1747319447446-93t0swz",
+    "timestamp": "2025-05-15T14:30:47.446Z",
+    "tokenAddress": "4aLyGDChFFmyhXcSpJDJnbQSJ9jfABrqJyLufFTGpump",
+    "solAmount": 0.0095,
+    "tokenAmount": 10588825.182473,
+    "txSignature": "2Dp28KM8dDsU8p4fnzXs2ufS7zSb98dw3ZXG3MtiYeQ4mHP89SWhmpJyrevW9bYMZGJk8pyskKz4qgcoGp92U9Bc",
+    "wallet": "HeqimeDRCrrieLt85hrHiaRGCPV43kHj3qgac8kbpCZ1",
+    "type": "buyback",
+    "rewardId": "1747319445585-rngd4kj"
+  }
+]
