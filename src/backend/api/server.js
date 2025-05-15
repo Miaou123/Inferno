@@ -115,7 +115,7 @@ app.get('/api/metrics', async (req, res) => {
     }
     
     // Log de la réponse complète
-    console.log("============ RÉPONSE API ============");
+    console.log("============ API RESPoNSE ============");
     console.log(JSON.stringify(responseData, null, 2));
     
     res.json({
@@ -262,54 +262,97 @@ app.get('/api/token-address', (req, res) => {
   });
 });
 
-// Get burn history with pagination
+// Ajoutez ceci à votre server.js
+app.get('/api/debug', (req, res) => {
+  // Lecture directe du fichier burns.json
+  const fs = require('fs');
+  const path = require('path');
+  const burnsPath = path.join(__dirname, '../../../data/burns.json');
+  
+  try {
+    const data = fs.readFileSync(burnsPath, 'utf8');
+    const burns = JSON.parse(data);
+    
+    res.json({
+      success: true,
+      message: 'Lecture directe de burns.json',
+      filePath: burnsPath,
+      burnsCount: burns.length,
+      firstBurn: burns[0],
+      secondBurn: burns[1],
+      allBurns: burns
+    });
+  } catch (error) {
+    res.json({
+      success: false,
+      error: error.message,
+      filePath: burnsPath
+    });
+  }
+});
+
+// Modifiez votre endpoint /api/burns pour plus de clarté
 app.get('/api/burns', async (req, res) => {
   try {
-    console.log("==== API DEBUG: /api/burns ====");
+    console.log("\n\n==== API DEBUG: /api/burns ====");
     console.log("Request time:", new Date().toISOString());
     
-    // Disable caching for this endpoint
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    // Désactivation forcée du cache
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.setHeader('Surrogate-Control', 'no-store');
     
+    // Lecture directe du fichier burns.json (pour déboguer)
+    const fs = require('fs');
+    const directPath = require('path').join(__dirname, '../../../data/burns.json');
+    
+    let directData = [];
+    try {
+      if (fs.existsSync(directPath)) {
+        const rawData = fs.readFileSync(directPath, 'utf8');
+        directData = JSON.parse(rawData);
+        if (directData.length > 0) {
+        }
+      } else {
+      }
+    } catch (directError) {
+      console.error(`Erreur en lecture directe: ${directError.message}`);
+    }
+    
+    // Lecture via fileStorage (méthode normale)
+    const allBurns = fileStorage.readData(fileStorage.FILES.burns);
+    
+    if (allBurns.length === 0) {
+      // Si aucune brûlure n'est trouvée, utilisons les données directes
+      
+      const response = {
+        burns: directData,
+        pagination: {
+          total: directData.length,
+          page: 1,
+          limit: directData.length,
+          pages: 1
+        }
+      };
+      
+      return res.json(response);
+    }
+    
+    // Si on a des données, continuons normalement
+    if (allBurns.length > 0) console.log(JSON.stringify(allBurns[0]));
+    if (allBurns.length > 1) console.log(JSON.stringify(allBurns[1]));
+    
+    // Tri, filtrage et pagination comme avant
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    const burnType = req.query.type; // Optional filter by burn type
+    const burnType = req.query.type;
     
-    console.log(`Request params: page=${page}, limit=${limit}, type=${burnType || 'all'}`);
-    
-    // Build filter function
     const filterFn = burnType ? burn => burn.burnType === burnType : () => true;
-    
-    // Always read fresh data directly from file to avoid any caching issues
-    const burnsFilePath = fileStorage.FILES.burns;
-    console.log(`Reading burns directly from file: ${burnsFilePath}`);
-    
-    // Read the raw data first for debugging
-    const allBurns = fileStorage.readData(burnsFilePath);
-    console.log(`Total burns in storage: ${allBurns.length}`);
-    
-    // Calculate a checksum of the data to help diagnose caching issues
-    const firstBurnAmount = allBurns.length > 0 ? allBurns[0].burnAmount : 0;
-    console.log(`BURN DATA VERSION CHECK: First burn amount = ${firstBurnAmount}`);
-    
-    console.log("ALL BURNS IN STORAGE:");
-    allBurns.forEach(b => console.log(`${b.id}: ${b.burnType}, ${b.burnAmount}, txHash: ${b.transactionHash}`));
-    
-    // Sort the data manually to ensure we have control over the order
     const sortedBurns = [...allBurns].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    
-    // Apply pagination and filtering
     const filteredBurns = sortedBurns.filter(filterFn);
     const paginatedBurns = filteredBurns.slice(skip, skip + limit);
-    
-    console.log(`Filtered burns count: ${filteredBurns.length}`);
-    console.log(`Paginated burns count: ${paginatedBurns.length}`);
-    console.log("ALL FILTERED BURNS:");
-    paginatedBurns.forEach(b => console.log(`${b.id}: ${b.burnType}, ${b.burnAmount}, txHash: ${b.transactionHash}`));
+  
     
     const response = {
       burns: paginatedBurns,
@@ -321,12 +364,13 @@ app.get('/api/burns', async (req, res) => {
       }
     };
     
-    console.log(`Sending response with ${paginatedBurns.length} burns`);
-    res.json(response);
+    return res.json(response);
   } catch (error) {
-    logger.error(`Error fetching burns: ${error}`);
-    console.error("Burns API error:", error);
-    res.status(500).json({ error: 'Failed to fetch burn history' });
+    console.error(`Erreur /api/burns: ${error.message}`);
+    return res.status(500).json({ 
+      error: 'Erreur lors de la récupération des brûlures',
+      message: error.message
+    });
   }
 });
 

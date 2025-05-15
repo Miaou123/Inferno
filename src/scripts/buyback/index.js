@@ -4,450 +4,24 @@
  * buys back tokens, and burns them automatically
  */
 const cron = require('node-cron');
-const axios = require('axios');
-const { 
-  Connection, 
-  PublicKey, 
-  Transaction, 
-  TransactionInstruction,
-  Keypair,
-  sendAndConfirmTransaction 
-} = require('@solana/web3.js');
-const { fetchTokenPrice } = require('../utils/priceOracle');
 const logger = require('../utils/logger').buyback;
 const fileStorage = require('../utils/fileStorage');
-const { createKeypair, getSolBalance, burnTokens, getConnection } = require('../utils/solana');
+
+// Import modular components
+const { checkAvailableRewards } = require('./checkRewards');
+const { claimRewards } = require('./claimRewards');
+const { executeBuyback } = require('./executeBuyback');
+const { burnBuybackTokens } = require('./burnTokens');
+
 require('dotenv').config();
 
 // Configuration from environment variables
 const config = {
-  rewardThreshold: parseFloat(process.env.REWARD_THRESHOLD_SOL) || 0.05,
+  // Use REWARDS_CLAIM_THRESHOLD or fall back to REWARD_THRESHOLD_SOL to ensure consistency
+  rewardThreshold: parseFloat(process.env.REWARDS_CLAIM_THRESHOLD) || 
+                   parseFloat(process.env.REWARD_THRESHOLD_SOL) || 0.1,
   maxSlippage: parseFloat(process.env.MAX_SLIPPAGE_PERCENT) || 2,
-  buybackInterval: parseInt(process.env.BUYBACK_INTERVAL_MINUTES) || 60
-};
-
-/**
- * Check for available creator rewards
- * @returns {Promise<Object>} Reward status
- */
-const checkCreatorRewards = async () => {
-  try {
-    logger.info('Checking for available creator rewards');
-    
-    // Get keypair
-    const keypair = createKeypair();
-    
-    // Get current SOL balance
-    const solBalance = await getSolBalance(keypair.publicKey.toString());
-    logger.info(`Current wallet SOL balance: ${solBalance}`);
-    
-    // TODO: Integrate with pump.fun's API to check for available rewards
-    // This is a placeholder implementation
-    // In production, you would call their API
-    
-    // For now, simulate by checking if wallet has enough SOL
-    if (solBalance >= config.rewardThreshold) {
-      logger.info(`Wallet has enough SOL (${solBalance}) to trigger buyback`);
-      return {
-        available: true,
-        amount: solBalance
-      };
-    }
-    
-    logger.info(`Wallet balance (${solBalance} SOL) below threshold (${config.rewardThreshold} SOL)`);
-    return {
-      available: false,
-      amount: solBalance
-    };
-  } catch (error) {
-    logger.error('Error checking creator rewards:', error);
-    return { available: false, error: error.message };
-  }
-};
-
-/**
- * Claim rewards from pump.fun
- * @returns {Promise<Object>} Claim result
- */
-const claimRewards = async () => {
-  try {
-    logger.info('Claiming creator rewards');
-    
-    // Get keypair
-    const keypair = createKeypair();
-    
-    // Create connection to Solana
-    const connection = getConnection();
-    
-    // Get the latest blockhash
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-    
-    // Create transaction
-    // Note: You'll need to replace these values with the correct ones from the decoded transaction
-    const transaction = new Transaction().add(
-      new TransactionInstruction({
-        keys: [
-          { pubkey: keypair.publicKey, isSigner: true, isWritable: true },
-          // This is the account we saw in the network traffic, likely related to the rewards program
-          { pubkey: new PublicKey('GHhV8rbzfxsDQuFffQJ69keGsGRB1pE9eYt4UrxiDSF'), isSigner: false, isWritable: true },
-          // Add more account keys as needed based on the actual program requirements
-        ],
-        // Replace with the actual program ID that handles reward claims
-        programId: new PublicKey('PROGRAM_ID_HERE'),
-        // Replace with the correct instruction data for claiming rewards
-        data: Buffer.from([/* instruction data */])
-      })
-    );
-    
-    // Set recent blockhash and fee payer
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = keypair.publicKey;
-    
-    // Simulate transaction to check if it will succeed
-    const simulation = await connection.simulateTransaction(transaction);
-    if (simulation.value.err) {
-      logger.error(`Simulation failed: ${JSON.stringify(simulation.value.err)}`);
-      return { success: false, error: 'Transaction simulation failed' };
-    }
-    
-    // Send and confirm transaction
-    const signature = await sendAndConfirmTransaction(
-      connection,
-      transaction,
-      [keypair],
-      {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-        commitment: 'confirmed',
-      }
-    );
-    
-    logger.info(`Claimed rewards successfully with tx: ${signature}`);
-    
-    // Record the claim in storage
-    const claimAmount = await getSolBalance(keypair.publicKey.toString());
-    const rewardRecord = {
-      solAmount: claimAmount,
-      claimTxSignature: signature,
-      status: 'claimed',
-      timestamp: new Date().toISOString()
-    };
-    
-    const savedReward = fileStorage.saveRecord('rewards', rewardRecord);
-    
-    return {
-      success: true,
-      amount: claimAmount,
-      txSignature: signature,
-      rewardId: savedReward.id
-    };
-  } catch (error) {
-    logger.error('Error claiming rewards:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * Execute token buyback using SOL
- * @param {Number} solAmount - Amount of SOL to use for buyback
- * @param {String} rewardId - Storage ID of the reward record
- * @returns {Promise<Object>} Buyback result
- */
-const executeBuyback = async (solAmount, rewardId) => {
-  try {
-    logger.info(`Executing buyback with ${solAmount} SOL`);
-    
-    // Get token price
-    const { tokenPriceInSol } = await fetchTokenPrice();
-    
-    // Calculate amount of tokens to buy (accounting for slippage)
-    const slippageBuffer = 1 - (config.maxSlippage / 100);
-    const expectedTokenAmount = (solAmount / tokenPriceInSol) * slippageBuffer;
-    
-    logger.info(`Expected token amount: ${expectedTokenAmount} at price ${tokenPriceInSol} SOL per token`);
-    
-    // TODO: Integrate with pump.fun's swap API to execute the buyback
-    // This is a placeholder implementation
-    // In production, you would integrate with their swap functionality
-    
-    // For now, simulate successful buyback
-    const actualTokenAmount = expectedTokenAmount * 0.99; // Simulate slight slippage
-    const txSignature = 'simulated_buyback_tx_signature';
-    
-    // Update the reward record
-    const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-    const updatedRewards = rewards.map(r => {
-      if (r.id === rewardId) {
-        return {
-          ...r,
-          tokensBought: actualTokenAmount,
-          buyTxSignature: txSignature,
-          status: 'bought',
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return r;
-    });
-    
-    fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-    
-    logger.info(`Bought ${actualTokenAmount} tokens with ${solAmount} SOL (tx: ${txSignature})`);
-    return {
-      success: true,
-      tokenAmount: actualTokenAmount,
-      solAmount,
-      txSignature
-    };
-  } catch (error) {
-    logger.error('Error executing buyback:', error);
-    
-    // Update reward record with error
-    if (rewardId) {
-      const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-      const updatedRewards = rewards.map(r => {
-        if (r.id === rewardId) {
-          return {
-            ...r,
-            status: 'failed',
-            errorMessage: error.message,
-            updatedAt: new Date().toISOString()
-          };
-        }
-        return r;
-      });
-      
-      fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-    }
-    
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * Burn tokens purchased from buyback
- * @param {Number} tokenAmount - Amount of tokens to burn
- * @param {String} rewardId - Storage ID of the reward record
- * @returns {Promise<Object>} Burn result
- */
-const burnBuybackTokens = async (tokenAmount, rewardId) => {
-  try {
-    logger.info(`Burning ${tokenAmount} tokens from buyback`);
-    
-    // Get keypair
-    const keypair = createKeypair();
-    
-    // Execute burn with retry mechanism for Helius
-    const maxRetries = 3;
-    let retryCount = 0;
-    let burnResult;
-    
-    while (retryCount < maxRetries) {
-      try {
-        // Execute burn with Helius-optimized parameters
-        burnResult = await burnTokens(
-          keypair, 
-          tokenAmount,
-          process.env.TOKEN_ADDRESS,
-          'buyback'
-        );
-        
-        if (burnResult.success) {
-          break; // Success, exit retry loop
-        } else {
-          // Check if this is a recoverable error (rate limit, etc.)
-          const isRateLimitError = burnResult.error && 
-            (burnResult.error.includes('429') || 
-             burnResult.error.includes('rate limit') ||
-             burnResult.error.includes('too many requests'));
-             
-          if (isRateLimitError && retryCount < maxRetries - 1) {
-            // Exponential backoff
-            const backoffMs = Math.pow(2, retryCount) * 1000;
-            logger.warn(`Rate limit reached, retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, backoffMs));
-            retryCount++;
-          } else {
-            // Non-recoverable error or max retries reached
-            logger.error(`Failed to burn tokens: ${burnResult.error}`);
-            
-            // Update reward record with error
-            if (rewardId) {
-              const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-              const updatedRewards = rewards.map(r => {
-                if (r.id === rewardId) {
-                  return {
-                    ...r,
-                    status: 'failed',
-                    errorMessage: burnResult.error,
-                    updatedAt: new Date().toISOString()
-                  };
-                }
-                return r;
-              });
-              
-              fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-            }
-            
-            return burnResult;
-          }
-        }
-      } catch (err) {
-        // Handle unexpected errors in the burn function
-        logger.error(`Unexpected error during burn (attempt ${retryCount + 1}/${maxRetries}):`, err);
-        
-        if (retryCount < maxRetries - 1) {
-          const backoffMs = Math.pow(2, retryCount) * 1000;
-          await new Promise(resolve => setTimeout(resolve, backoffMs));
-          retryCount++;
-        } else {
-          throw err; // Re-throw if max retries reached
-        }
-      }
-    }
-    
-    if (!burnResult || !burnResult.success) {
-      logger.error('Failed to burn tokens after maximum retries');
-      return { success: false, error: 'Maximum retry attempts reached' };
-    }
-    
-    // Get detailed transaction information from Helius
-    const { getEnhancedTransactionDetails } = require('../utils/solana');
-    let txDetails;
-    
-    try {
-      txDetails = await getEnhancedTransactionDetails(burnResult.signature);
-      logger.info('Retrieved enhanced transaction details from Helius');
-    } catch (txError) {
-      logger.warn(`Could not retrieve enhanced transaction details: ${txError.message}`);
-      // Continue even if we can't get enhanced details
-    }
-    
-    // Create burn record with enhanced data if available
-    const burnRecord = {
-      burnType: 'buyback',
-      amount: tokenAmount,
-      txSignature: burnResult.signature,
-      initiator: 'buyback-script',
-      timestamp: new Date().toISOString(),
-      details: {
-        source: 'creator-rewards',
-        rewardId,
-        blockTime: txDetails?.blockTime ? new Date(txDetails.blockTime * 1000).toISOString() : null,
-        fee: txDetails?.meta?.fee || null,
-        slot: txDetails?.slot || null,
-        // Include any Helius-specific data
-        heliusData: txDetails ? {
-          tokenTransfers: txDetails.meta?.tokenTransfers || null,
-          accountData: txDetails.meta?.loadedAddresses || null,
-        } : null
-      }
-    };
-    
-    const savedBurn = fileStorage.saveRecord('burns', burnRecord);
-    
-    // Update reward record
-    const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-    const updatedRewards = rewards.map(r => {
-      if (r.id === rewardId) {
-        return {
-          ...r,
-          tokensBurned: tokenAmount,
-          burnTxSignature: burnResult.signature,
-          status: 'burned',
-          burnId: savedBurn.id,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return r;
-    });
-    
-    fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-    
-    // Update metrics
-    await updateMetrics(tokenAmount);
-    
-    logger.info(`Successfully burned ${tokenAmount} tokens (tx: ${burnResult.signature})`);
-    return {
-      success: true,
-      amount: tokenAmount,
-      txSignature: burnResult.signature,
-      burnId: savedBurn.id
-    };
-  } catch (error) {
-    logger.error('Error burning buyback tokens:', error);
-    
-    // Update reward record with error
-    if (rewardId) {
-      const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-      const updatedRewards = rewards.map(r => {
-        if (r.id === rewardId) {
-          return {
-            ...r,
-            status: 'failed',
-            errorMessage: error.message,
-            updatedAt: new Date().toISOString()
-          };
-        }
-        return r;
-      });
-      
-      fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-    }
-    
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * Update token metrics after a burn
- * @param {Number} burnAmount - Amount of tokens burned
- */
-const updateMetrics = async (burnAmount) => {
-  try {
-    // Get current metrics
-    const metrics = fileStorage.findRecords('metrics', () => true, { 
-      sort: { field: 'timestamp', order: 'desc' }, 
-      limit: 1 
-    });
-    
-    const latestMetrics = metrics[0];
-    
-    // If no metrics exist, create a new baseline
-    if (!latestMetrics) {
-      const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-      const newMetrics = {
-        timestamp: new Date().toISOString(),
-        totalSupply: initialSupply - burnAmount,
-        circulatingSupply: initialSupply - burnAmount - (initialSupply * 0.3), // Reserve wallet not affected by buyback burns
-        reserveWalletBalance: initialSupply * 0.3,
-        totalBurned: burnAmount,
-        buybackBurned: burnAmount,
-        milestoneBurned: 0
-      };
-      
-      fileStorage.saveRecord('metrics', newMetrics);
-      return;
-    }
-    
-    // Create new metrics entry
-    const newMetrics = {
-      timestamp: new Date().toISOString(),
-      totalSupply: latestMetrics.totalSupply - burnAmount,
-      circulatingSupply: latestMetrics.circulatingSupply - burnAmount,
-      reserveWalletBalance: latestMetrics.reserveWalletBalance,
-      totalBurned: latestMetrics.totalBurned + burnAmount,
-      buybackBurned: latestMetrics.buybackBurned + burnAmount,
-      milestoneBurned: latestMetrics.milestoneBurned,
-      priceInSol: latestMetrics.priceInSol,
-      priceInUsd: latestMetrics.priceInUsd,
-      marketCap: latestMetrics.marketCap
-    };
-    
-    fileStorage.saveRecord('metrics', newMetrics);
-    logger.info('Metrics updated successfully');
-  } catch (error) {
-    logger.error(`Error updating metrics: ${error}`);
-  }
+  buybackInterval: parseInt(process.env.BUYBACK_INTERVAL_MINUTES) || 15
 };
 
 /**
@@ -461,37 +35,50 @@ const performBuybackAndBurn = async () => {
     fileStorage.initializeStorage();
     
     // Check for available rewards
-    const rewardsStatus = await checkCreatorRewards();
+    const rewardsInfo = await checkAvailableRewards();
     
-    if (!rewardsStatus.available) {
-      logger.info('No rewards available for buyback');
+    if (!rewardsInfo.success) {
+      logger.error(`Failed to check available rewards: ${rewardsInfo.error}`);
       return;
     }
     
-    // Claim rewards (in production, this would actually claim from pump.fun)
+    logger.info(`Available rewards: ${rewardsInfo.availableAmount} SOL`);
+    
+    // Check if rewards are above threshold
+    if (rewardsInfo.availableAmount < config.rewardThreshold) {
+      logger.info(`Available rewards (${rewardsInfo.availableAmount} SOL) below threshold (${config.rewardThreshold} SOL)`);
+      return;
+    }
+    
+    // Claim rewards
     const claimResult = await claimRewards();
     
     if (!claimResult.success) {
-      logger.error('Failed to claim rewards, aborting buyback');
+      logger.error(`Failed to claim rewards, aborting buyback: ${claimResult.error}`);
       return;
     }
+    
+    logger.info(`Successfully claimed ${claimResult.amount} SOL ($${claimResult.amountUsd.toFixed(2)}) in rewards`);
     
     // Execute buyback
     const buybackResult = await executeBuyback(claimResult.amount, claimResult.rewardId);
     
     if (!buybackResult.success) {
-      logger.error('Failed to execute buyback, aborting process');
+      logger.error(`Failed to execute buyback, aborting process: ${buybackResult.error}`);
       return;
     }
+    
+    logger.info(`Successfully bought ${buybackResult.tokenAmount} tokens with ${buybackResult.solAmount} SOL`);
     
     // Burn tokens
     const burnResult = await burnBuybackTokens(buybackResult.tokenAmount, claimResult.rewardId);
     
     if (!burnResult.success) {
-      logger.error('Failed to burn tokens');
+      logger.error(`Failed to burn tokens: ${burnResult.error}`);
       return;
     }
     
+    logger.info(`Successfully burned ${burnResult.amount} tokens (tx: ${burnResult.txSignature})`);
     logger.info('Buyback and burn process completed successfully');
   } catch (error) {
     logger.error('Error in buyback and burn process:', error);
@@ -505,6 +92,11 @@ const startBuybackMonitoring = async () => {
   try {
     // Initialize storage
     fileStorage.initializeStorage();
+    
+    logger.info('Buyback and burn monitoring starting');
+    logger.info(`Reward threshold: ${config.rewardThreshold} SOL`);
+    logger.info(`Max slippage: ${config.maxSlippage}%`);
+    logger.info(`Check interval: ${config.buybackInterval} minutes`);
     
     // Run initial buyback
     await performBuybackAndBurn();
@@ -536,10 +128,11 @@ if (require.main === module) {
 
 // Export functions for testing and importing
 module.exports = {
-  checkCreatorRewards,
+  checkAvailableRewards,
   claimRewards,
   executeBuyback,
   burnBuybackTokens,
   performBuybackAndBurn,
-  startBuybackMonitoring
+  startBuybackMonitoring,
+  config
 };

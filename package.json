@@ -8,7 +8,6 @@
     "dev-api": "node src/backend/api/server.js",
     "buyback": "node src/scripts/buyback/index.js",
     "milestone": "node src/scripts/milestone/index.js",
-    "rewards": "node src/scripts/rewards/index.js",
     "setup": "node src/scripts/setup.js",
     "create-token": "node src/scripts/token/createToken.js",
     "update-metrics": "node src/scripts/updateMetrics.js",
@@ -16,7 +15,7 @@
     "test-rewards": "node src/scripts/test-rewards.js",
     "decode-tx": "node src/scripts/token/decodeTx.js",
     "init": "node initialize.js",
-    "start": "concurrently \"npm run buyback\" \"npm run milestone\" \"npm run rewards\" \"npm run start-api\"",
+    "start": "concurrently \"npm run buyback\" \"npm run milestone\" \"npm run start-api\"",
     "test": "jest"
   },
   "dependencies": {
