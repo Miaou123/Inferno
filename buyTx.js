@@ -15,7 +15,7 @@ const {
     
     // Load your keypair (from a private key)
     // IMPORTANT: Don't hardcode your private key in production code
-    const privateKey = bs58.decode('22s4K3MdLvvvD953yWMPKvPc2swJvDzCowyCL5QpPitfRyrUXd77dDHTAdqo6ze9CNVKGQaSMwaJ3jMEeZhwKtM1'); // Replace with your private key
+    const privateKey = bs58.decode('process.env.SOLANA_PRIVATE_KEY'); // Replace with your private key
     const keypair = Keypair.fromSecretKey(privateKey);
     
     // Define the accounts needed for the swap
