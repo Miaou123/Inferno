@@ -3,18 +3,49 @@
  * Part of the buyback system
  */
 const { 
+    Connection, 
     PublicKey, 
     Transaction, 
-    TransactionInstruction 
+    TransactionInstruction,
+    ComputeBudgetProgram,
+    SystemProgram
   } = require('@solana/web3.js');
-  const { 
-    TOKEN_PROGRAM_ID,
-    ASSOCIATED_TOKEN_PROGRAM_ID,
-    getAssociatedTokenAddress, // Use this instead of Token.getAssociatedTokenAddress
-  } = require('@solana/spl-token');
   const logger = require('../utils/logger').buyback;
   const { createKeypair, getConnection } = require('../utils/solana');
   require('dotenv').config();
+  
+  // Constants based on successful transaction
+  const REWARDS_PROGRAM_ID = new PublicKey('pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA');
+  const WSOL_MINT = new PublicKey('So11111111111111111111111111111111111111112');
+  const PROGRAM_AUTHORITY = new PublicKey('GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR');
+  const COMPUTE_BUDGET_PROGRAM = new PublicKey('ComputeBudget111111111111111111111111111111');
+  const COIN_PROGRAM = new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
+  const EVENT_AUTHORITY = new PublicKey('Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1');
+  
+  /**
+   * Get the accounts needed for the transaction
+   * @returns {Object} Account information
+   */
+  const getCoinAccounts = () => {
+    try {
+      // Creator vault - vault for creator rewards
+      const creatorVault = process.env.CREATOR_VAULT || 'ANYekpdHFWSmVzEt9iBeLFMFeQiPGjcZexFkLprtcCHj';
+      
+      // Creator address - vault authority
+      const creatorAddress = process.env.CREATOR_ADDRESS || '7S8Uf4JHVVxdLJMh68WCUpxWqoy3wMfPGMEqGKY31Rg5';
+      
+      logger.debug(`Using CREATOR_VAULT: ${creatorVault}`);
+      logger.debug(`Using CREATOR_ADDRESS: ${creatorAddress}`);
+      
+      return {
+        creatorVault: new PublicKey(creatorVault),
+        creatorAddress: new PublicKey(creatorAddress)
+      };
+    } catch (error) {
+      logger.error(`Error getting coin accounts: ${error.message}`);
+      throw error;
+    }
+  };
   
   /**
    * Check for available creator rewards using transaction simulation
@@ -24,72 +55,53 @@ const {
     try {
       logger.info('Checking for available rewards using transaction simulation');
       
-      // Get keypair
+      // Get keypair and connection
       const keypair = createKeypair();
-      
-      // Create connection to Solana
       const connection = getConnection();
       
       // Get the latest blockhash
       const { blockhash } = await connection.getLatestBlockhash('confirmed');
       
-      // Define necessary accounts (same as in claimRewards.js)
-      const solMint = new PublicKey('So11111111111111111111111111111111111111112');
-      const tokenProgram = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-      const rewardProgram = new PublicKey('pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA');
-      const programStateAccount = new PublicKey('GHhV8rbzfxsDQuFffQJ69keGsGRB1pE9eYt4UrxiDSF');
-      const programAuthority = new PublicKey('GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR');
+      // Get account information
+      const { creatorVault, creatorAddress } = getCoinAccounts();
       
-      // Get the associated token account for SOL
-      const tokenAccount = await getAssociatedTokenAddress(
-        solMint,
-        keypair.publicKey
-      );
-  
-      // This might be a PDA derived from your wallet or token data
-      const programAccount = new PublicKey('Eo1meN9uVcqZSgfisoq3ZMM4W9fHdgnYBiRsHULVgLho');
-      
-      // Create transaction
+      // Create transaction for simulation
       const transaction = new Transaction();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = keypair.publicKey;
       
-      // Check if token account exists and create it if needed
-      const tokenAccountInfo = await connection.getAccountInfo(tokenAccount);
-      if (!tokenAccountInfo) {
-        // Import the required function for creating associated token accounts
-        const { createAssociatedTokenAccountInstruction } = require('@solana/spl-token');
-        
-        // Add instruction to create associated token account
-        transaction.add(
-          createAssociatedTokenAccountInstruction(
-            keypair.publicKey, // payer
-            tokenAccount,      // associated token account address
-            keypair.publicKey, // owner
-            solMint            // mint
-          )
-        );
-      }
-      
-      // Add instruction to claim rewards - same as in claimRewards.js
+      // 1. Set compute unit limit
       transaction.add(
         new TransactionInstruction({
-          keys: [
-            { pubkey: solMint, isSigner: false, isWritable: false },
-            { pubkey: tokenProgram, isSigner: false, isWritable: false },
-            { pubkey: keypair.publicKey, isSigner: true, isWritable: true },
-            { pubkey: programAccount, isSigner: false, isWritable: false },
-            { pubkey: tokenAccount, isSigner: false, isWritable: true },
-            { pubkey: programStateAccount, isSigner: false, isWritable: true },
-            { pubkey: programAuthority, isSigner: false, isWritable: false },
-            { pubkey: rewardProgram, isSigner: false, isWritable: false },
-          ],
-          programId: rewardProgram,
-          data: Buffer.from([160, 57, 89, 42, 181, 139, 43, 66]) // a039592ab58b2b42 in hex
+          programId: COMPUTE_BUDGET_PROGRAM,
+          keys: [],
+          data: Buffer.from([2, 248, 61, 1, 0])
         })
       );
       
-      // Set recent blockhash and fee payer
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = keypair.publicKey;
+      // 2. Set compute unit price
+      transaction.add(
+        new TransactionInstruction({
+          programId: COMPUTE_BUDGET_PROGRAM,
+          keys: [],
+          data: Buffer.from([3, 160, 134, 1, 0, 0, 0, 0, 0])
+        })
+      );
+      
+      // 3. Collect creator fee - THIS IS THE MAIN INSTRUCTION THAT COLLECTS REWARDS
+      transaction.add(
+        new TransactionInstruction({
+          programId: COIN_PROGRAM,
+          keys: [
+            { pubkey: keypair.publicKey, isSigner: true, isWritable: true },
+            { pubkey: creatorVault, isSigner: false, isWritable: true },
+            { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+            { pubkey: EVENT_AUTHORITY, isSigner: false, isWritable: false },
+            { pubkey: COIN_PROGRAM, isSigner: false, isWritable: false }
+          ],
+          data: Buffer.from([20, 22, 86, 123, 198, 28, 219, 132])
+        })
+      );
       
       // Simulate the transaction
       logger.info('Simulating claim transaction to check for available rewards');
@@ -104,78 +116,80 @@ const {
         };
       }
       
-      // Log detailed simulation results for analysis
-      logger.debug('Simulation successful, analyzing results');
-      if (simulationResult.value.logs && simulationResult.value.logs.length > 0) {
-        logger.debug('Simulation logs:');
-        simulationResult.value.logs.forEach(log => logger.debug(` - ${log}`));
+      // Check logs for collection status
+      const logs = simulationResult.value.logs || [];
+      
+      // Check for transfer logs that indicate SOL being received
+      let availableAmount = 0;
+      let transferFound = false;
+      
+      for (const log of logs) {
+        logger.debug(`Simulation log: ${log}`);
+        
+        // Look for System Program transfer messages
+        if (log.includes('Program 11111111111111111111111111111111 invoke')) {
+          const nextLog = logs[logs.indexOf(log) + 1];
+          if (nextLog && nextLog.includes('Transfer')) {
+            transferFound = true;
+            // Try to extract the amount
+            const transferLamports = extractTransferAmount(logs, logs.indexOf(log));
+            if (transferLamports > 0) {
+              availableAmount = transferLamports / 1e9; // Convert lamports to SOL
+            }
+          }
+        }
+        
+        // Also check for direct logs about creator fee
+        if (log.includes('creator fee:') || log.includes('creatorFee:')) {
+          transferFound = true;
+          // Try to extract amount
+          const match = log.match(/(?:creator fee|creatorFee):\s*["']?(\d+)["']?/i);
+          if (match && match[1]) {
+            const lamports = parseInt(match[1], 10);
+            availableAmount = lamports / 1e9; // Convert to SOL
+          }
+        }
       }
       
-      // Extract available rewards amount from simulation results
-      // For enhanced debugging and program understanding
-      let availableAmount = 0;
+      // Check if the "No creator fee to collect" message exists
+      const noRewardsMessage = logs.some(log => 
+        log.includes('No creator fee to collect') || 
+        log.includes('No coin creator fee to collect')
+      );
       
-      // Check account state changes to determine reward amount
-      if (simulationResult.value.accounts && simulationResult.value.accounts.length > 0) {
-        logger.debug(`Simulation returned ${simulationResult.value.accounts.length} accounts`);
-        
-        // Process token account balance changes
-        // Find the token account in the simulation results
-        let tokenAccountIndex = -1;
-        
-        for (let i = 0; i < simulationResult.value.accounts.length; i++) {
-          const account = simulationResult.value.accounts[i];
-          if (account && account.pubkey && account.pubkey.equals(tokenAccount)) {
-            tokenAccountIndex = i;
-            break;
-          }
-        }
-        
-        if (tokenAccountIndex >= 0) {
-          logger.debug(`Found token account at index ${tokenAccountIndex}`);
-          const simAccount = simulationResult.value.accounts[tokenAccountIndex];
-          
-          // Calculate the token balance change if we can get the pre and post balances
-          if (simAccount && simAccount.lamports && tokenAccountInfo) {
-            const preBalance = tokenAccountInfo.lamports;
-            const postBalance = simAccount.lamports;
-            const balanceChange = postBalance - preBalance;
-            
-            // Convert lamports to SOL
-            availableAmount = balanceChange / 1e9;
-            logger.debug(`Detected token account change: ${balanceChange} lamports (${availableAmount} SOL)`);
-          }
-        }
+      if (noRewardsMessage) {
+        logger.info('No rewards available to collect');
+        return {
+          success: true,
+          availableAmount: 0,
+          hasRewards: false
+        };
+      }
+      
+      // If we've found a transfer but couldn't determine the amount, use a minimum value
+      if (transferFound && availableAmount === 0) {
+        availableAmount = 0.0001; // Minimum amount
+        logger.info(`Transfer detected but couldn't determine amount. Using minimum: ${availableAmount} SOL`);
       }
       
       if (availableAmount > 0) {
-        logger.info(`Available rewards detected: ${availableAmount} SOL`);
-      } else {
-        // Look at unitsConsumed as another indicator of available rewards
-        if (simulationResult.value.unitsConsumed > 0) {
-          logger.debug(`Transaction would consume ${simulationResult.value.unitsConsumed} compute units`);
-          
-          // If compute units are used but we detected no balance change,
-          // this might indicate a token program operation that doesn't transfer tokens
-          if (simulationResult.value.unitsConsumed > 1000) {
-            logger.info('Transaction simulation consumed significant compute units, indicating potential activity');
-          }
-        }
-        
-        logger.info('No rewards detected from simulation');
+        logger.info(`Found available rewards: ${availableAmount} SOL`);
+        return {
+          success: true,
+          availableAmount,
+          hasRewards: true
+        };
       }
       
+      // If we've made it here, logs didn't conclusively show rewards
       return {
         success: true,
-        availableAmount,
-        hasRewards: availableAmount > 0,
-        simulationDetails: {
-          unitsConsumed: simulationResult.value.unitsConsumed || 0,
-          logCount: (simulationResult.value.logs || []).length
-        }
+        availableAmount: 0,
+        hasRewards: false,
+        message: 'No clear evidence of rewards in simulation'
       };
     } catch (error) {
-      logger.error('Error checking available rewards:', error);
+      logger.error(`Error checking available rewards: ${error.message}`);
       return { 
         success: false, 
         availableAmount: 0,
@@ -184,6 +198,35 @@ const {
     }
   };
   
+  /**
+   * Helper function to extract transfer amount from logs
+   * @param {Array} logs - Transaction logs
+   * @param {Number} transferIndex - Index of the transfer log
+   * @returns {Number} Transfer amount in lamports
+   */
+  const extractTransferAmount = (logs, transferIndex) => {
+    try {
+      // Check the logs for amount information
+      for (let i = transferIndex; i < transferIndex + 3 && i < logs.length; i++) {
+        const log = logs[i];
+        
+        // Look for amount references
+        if (log.includes('amount:') || log.includes('lamports:') || log.includes('creatorFee:')) {
+          const match = log.match(/(?:amount|lamports|creatorFee):\s*(\d+)/i);
+          if (match && match[1]) {
+            return parseInt(match[1], 10);
+          }
+        }
+      }
+      
+      return 0;
+    } catch (error) {
+      logger.error(`Error extracting transfer amount: ${error.message}`);
+      return 0;
+    }
+  };
+  
   module.exports = {
-    checkAvailableRewards
+    checkAvailableRewards,
+    getCoinAccounts
   };
