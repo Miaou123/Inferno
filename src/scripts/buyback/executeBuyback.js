@@ -1,25 +1,24 @@
 /**
- * Buyback execution utility for $INFERNO token
- * Part of the buyback system - With working instruction format
+ * Buyback execution utility for $INFERNO token using Jupiter API
  */
 const { 
     Connection, 
     PublicKey, 
     Transaction, 
-    sendAndConfirmTransaction,
-    TransactionInstruction,
-    ComputeBudgetProgram
+    VersionedTransaction,
+    sendAndConfirmTransaction
   } = require('@solana/web3.js');
+  const axios = require('axios');
   const bs58 = require('bs58');
   const logger = require('../utils/logger').buyback;
   const fileStorage = require('../utils/fileStorage');
-  const { createKeypair, getConnection } = require('../utils/solana');
+  const { createKeypair, getConnection, getEnhancedTransactionDetails } = require('../utils/solana');
   const { fetchTokenPrice } = require('../utils/priceOracle');
   require('dotenv').config();
   
   // Configuration from environment variables
   const config = {
-    maxSlippage: parseFloat(process.env.MAX_SLIPPAGE_PERCENT) || 5, // Default to 5% slippage
+    maxSlippage: parseFloat(process.env.MAX_SLIPPAGE_PERCENT) || 2, // Default to 2% slippage
     testMode: process.env.TEST_MODE === 'true' || false
   };
   
@@ -49,327 +48,165 @@ const {
       const connection = getConnection();
       
       // Token address
-      const tokenAddress = process.env.TOKEN_ADDRESS || '4aLyGDChFFmyhXcSpJDJnbQSJ9jfABrqJyLufFTGpump';
-      const tokenMint = new PublicKey(tokenAddress);
+      const tokenAddress = process.env.TOKEN_ADDRESS;
       
       logger.info(`Keypair public key: ${keypair.publicKey.toString()}`);
       logger.info(`Token address: ${tokenAddress}`);
       
-      // Creator vault
-      const creatorVaultAddress = process.env.CREATOR_VAULT || 'ANYekpdHFWSmVzEt9iBeLFMFeQiPGjcZexFkLprtcCHj';
-      logger.info(`Creator vault address: ${creatorVaultAddress}`);
-      
-      // In test mode, simulate a successful buyback
+      // Test mode handling
       if (config.testMode) {
-        logger.info('TEST MODE: Simulating buyback transaction');
-        
-        // Simulate a successful transaction
-        const txSignature = `simulated_buyback_tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        const tokenAmount = Math.floor(buybackSolAmount * 100000); // Simulate 1 SOL = 100,000 tokens
-        
-        // Update the reward record
-        const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-        const updatedRewards = rewards.map(r => {
-          if (r.id === rewardId) {
-            return {
-              ...r,
-              tokensBought: tokenAmount,
-              buyTxSignature: txSignature,
-              solAmountUsed: buybackSolAmount,
-              solAmountReserved: solAmount - buybackSolAmount,
-              status: 'bought',
-              updatedAt: new Date().toISOString()
-            };
-          }
-          return r;
-        });
-        
-        fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-        
-        // Create token buy record
-        const buyRecord = {
-          timestamp: new Date().toISOString(),
-          tokenAddress,
-          solAmount: buybackSolAmount,
-          tokenAmount: tokenAmount,
-          txSignature,
-          wallet: keypair.publicKey.toString(),
-          type: 'buyback',
-          rewardId,
-          mockMode: true
-        };
-        
-        fileStorage.saveRecord('tokenBuys', buyRecord);
-        
-        logger.info(`TEST MODE: Simulated buying ${tokenAmount.toLocaleString()} tokens with ${buybackSolAmount} SOL (tx: ${txSignature})`);
-        
-        // Return simulated result
-        return {
-          success: true,
-          tokenAmount: tokenAmount,
-          solAmount: buybackSolAmount,
-          solAmountReserved: solAmount - buybackSolAmount,
-          txSignature,
-          testMode: true
-        };
+        // Your existing test mode code
+        // ...
+        return simulatedBuyback(solAmount, rewardId, buybackSolAmount, tokenAddress, keypair);
       }
       
-      // For testing on devnet, create a simulated result
-      if (process.env.SOLANA_RPC_URL && process.env.SOLANA_RPC_URL.includes('devnet')) {
-        logger.warn('Using devnet - creating simulated transaction instead of real swap');
-        
-        // Simulate a successful transaction
-        const txSignature = `simulated_tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-        const tokenAmount = Math.floor(buybackSolAmount * 100000); // Simulate 1 SOL = 100,000 tokens
-        
-        // Update the reward record
-        const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-        const updatedRewards = rewards.map(r => {
-          if (r.id === rewardId) {
-            return {
-              ...r,
-              tokensBought: tokenAmount,
-              buyTxSignature: txSignature,
-              solAmountUsed: buybackSolAmount,
-              solAmountReserved: solAmount - buybackSolAmount,
-              status: 'bought',
-              updatedAt: new Date().toISOString()
-            };
-          }
-          return r;
-        });
-        
-        fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-        
-        // Create token buy record
-        const buyRecord = {
-          timestamp: new Date().toISOString(),
-          tokenAddress,
-          solAmount: buybackSolAmount,
-          tokenAmount: tokenAmount,
-          txSignature,
-          wallet: keypair.publicKey.toString(),
-          type: 'buyback',
-          rewardId,
-          devnet: true
-        };
-        
-        fileStorage.saveRecord('tokenBuys', buyRecord);
-        
-        return {
-          success: true,
-          tokenAmount: tokenAmount,
-          solAmount: buybackSolAmount,
-          solAmountReserved: solAmount - buybackSolAmount,
-          txSignature,
-          simulated: true
-        };
-      }
-      
-      // REAL TRANSACTION EXECUTION
-      logger.info(`Preparing to execute swap on pump.fun: ${buybackSolAmount} SOL → ${tokenAddress}`);
+      // REAL TRANSACTION EXECUTION WITH JUPITER API
+      logger.info(`Preparing to swap ${buybackSolAmount} SOL for ${tokenAddress} using Jupiter API`);
       
       try {
-        // Fetch token price information for calculating slippage
-        logger.info(`Fetching token price for slippage calculation (${config.maxSlippage}% slippage tolerance)`);
-        const priceData = await fetchTokenPrice();
-        const tokenPriceInSol = priceData.tokenPriceInSol;
+        // Calculate lamports (SOL amount in smallest unit)
+        const lamports = Math.floor(buybackSolAmount * 1_000_000_000);
         
-        logger.info(`Current token price: ${tokenPriceInSol} SOL per token (${priceData.tokenPriceInUsd} USD)`);
+        // We need slippage as basis points (1% = 100 basis points)
+        const slippageBps = Math.floor(config.maxSlippage * 100);
         
-        // Get the latest blockhash
-        const { blockhash } = await connection.getLatestBlockhash('confirmed');
+        // Input token is SOL
+        const inputMint = 'So11111111111111111111111111111111111111112';
+        // Output token is our target token
+        const outputMint = tokenAddress;
         
-        // Create transaction
-        const transaction = new Transaction();
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = keypair.publicKey;
+        // Step 1: Get a quote from Jupiter API
+        logger.info(`Getting Jupiter quote for ${buybackSolAmount} SOL to ${tokenAddress} with ${config.maxSlippage}% slippage`);
+        const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${lamports}&slippageBps=${slippageBps}`;
         
-        // Add compute budget instructions
-        // 1. Set compute unit limit 
-        transaction.add(
-          ComputeBudgetProgram.setComputeUnitLimit({
-            units: 48720
-          })
-        );
+        const quoteResponse = await axios.get(quoteUrl);
         
-        // 2. Set compute unit price
-        transaction.add(
-          ComputeBudgetProgram.setComputeUnitPrice({
-            microLamports: 1624494
-          })
-        );
-        
-        // Define necessary addresses
-        const PUMP_PROGRAM_ID = new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
-        const SYSTEM_PROGRAM_ID = new PublicKey('11111111111111111111111111111111');
-        const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-        const EVENT_AUTHORITY = new PublicKey('Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1');
-        
-        // Use fixed addresses from successful transactions
-        const stateAccountInfo = new PublicKey('4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf');
-        const stateAccount = new PublicKey('CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM');
-        const creator = new PublicKey('CPLnZDbHTrCqY3Tvzvk1VmYNuGHwmyfQwQ6gBhd6pHmc');
-        
-        // Use provided addresses
-        const creatorFeeAccount = new PublicKey(creatorVaultAddress);
-        
-        // For the user's token account, we need to derive it for the token mint
-        // First check if user has an existing account
-        let buyerTokenAccount;
-        try {
-          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-            keypair.publicKey,
-            { mint: tokenMint }
-          );
-          
-          if (tokenAccounts.value.length > 0) {
-            buyerTokenAccount = tokenAccounts.value[0].pubkey;
-            logger.info(`Found existing token account: ${buyerTokenAccount.toString()}`);
-          } else {
-            // If no token account exists, create an address that will be created during the transaction
-            // Use a fixed address from the sample transaction for safety
-            buyerTokenAccount = new PublicKey('A3esEVbFFJy1BbHznygcVuepBFDRvva28EPE8ocNCN4h');
-            logger.info(`No token account found, will use placeholder: ${buyerTokenAccount.toString()}`);
-          }
-        } catch (error) {
-          logger.warn(`Error checking token accounts: ${error.message}`);
-          buyerTokenAccount = new PublicKey('A3esEVbFFJy1BbHznygcVuepBFDRvva28EPE8ocNCN4h');
+        if (!quoteResponse.data || quoteResponse.status !== 200) {
+          throw new Error(`Failed to get Jupiter quote: ${JSON.stringify(quoteResponse.data)}`);
         }
         
-        // For the creator's token account, use the fixed address from the working transaction
-        const creatorTokenAccount = new PublicKey('9h3N8R7wMoNo787DF3n5Zx5nWyNXDtcUfaxmT2g5yxSV');
+        const quoteData = quoteResponse.data;
         
-        // Convert SOL amount to lamports (whole number)
-        const lamports = Math.floor(buybackSolAmount * 1000000000);
+        // Access the correct fields for quote data
+        const outAmount = quoteData.outAmount;
+        const outAmountWithSlippage = quoteData.outAmountWithSlippage;
         
-        // IMPORTANT: Create the buy instruction data with proper discriminator
-        // The instruction discriminator for "Buy" from the working example
-        const discriminator = Buffer.from([102, 6, 61, 18, 1, 218, 235, 234]);
+        logger.info(`Quote received: ${outAmount} tokens (${outAmountWithSlippage} min with slippage)`);
         
-        // SOL amount as little-endian 64-bit integer buffer
-        const solAmountBuffer = Buffer.alloc(8);
-        solAmountBuffer.writeBigUInt64LE(BigInt(lamports));
+        // Expected token amount from quote
+        const expectedTokens = parseFloat(outAmount) / 10**6; // Assuming 6 decimals for token
+        const minTokens = parseFloat(outAmountWithSlippage) / 10**6;
         
-        // Calculate minimum tokens to receive with slippage tolerance
-        // Calculate expected token amount
-        const expectedTokens = buybackSolAmount / tokenPriceInSol;
+        logger.info(`Expected tokens: ${expectedTokens.toFixed(6)}`);
+        logger.info(`Min tokens with slippage: ${minTokens.toFixed(6)}`);
         
-        // Apply slippage tolerance (e.g., 5% slippage = 95% of expected amount)
-        const slippageMultiplier = 1 - (config.maxSlippage / 100);
-        const minTokensWithSlippage = Math.floor(expectedTokens * slippageMultiplier);
+        // Step 2: Get the swap transaction from Jupiter API
+        logger.info('Getting swap transaction from Jupiter API');
+        const swapUrl = 'https://quote-api.jup.ag/v6/swap';
         
-        // Convert to token units (accounting for decimals, usually 6 for Solana)
-        const decimals = 6; // Typical for most Solana tokens
-        const minTokensInSmallestUnit = BigInt(Math.floor(minTokensWithSlippage * (10 ** decimals)));
-        
-        // Convert min tokens to little-endian buffer
-        const minOutputBuffer = Buffer.alloc(8);
-        minOutputBuffer.writeBigUInt64LE(minTokensInSmallestUnit);
-        
-        // Combine all parts into the final instruction data
-        const instructionData = Buffer.concat([
-          discriminator,      // 8 bytes - instruction discriminator 
-          solAmountBuffer,    // 8 bytes - SOL amount in lamports
-          minOutputBuffer     // 8 bytes - minimum tokens to receive
-        ]);
-        
-        logger.info(`Expected tokens: ${expectedTokens}`);
-        logger.info(`Min tokens with ${config.maxSlippage}% slippage: ${minTokensWithSlippage}`);
-        logger.info(`Min tokens in smallest unit: ${minTokensInSmallestUnit}`);
-        logger.info(`Instruction data (hex): ${instructionData.toString('hex')}`);
-        logger.info(`Instruction data (base58): ${bs58.encode(instructionData)}`);
-        
-        // Ensure accounts are in the EXACT order from the working transaction
-        const accounts = [
-          { pubkey: stateAccountInfo, isSigner: false, isWritable: true },
-          { pubkey: stateAccount, isSigner: false, isWritable: true },
-          { pubkey: tokenMint, isSigner: false, isWritable: true },
-          { pubkey: creator, isSigner: false, isWritable: true },
-          { pubkey: creatorTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: buyerTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: keypair.publicKey, isSigner: true, isWritable: true },
-          { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
-          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-          { pubkey: creatorFeeAccount, isSigner: false, isWritable: true },
-          { pubkey: EVENT_AUTHORITY, isSigner: false, isWritable: false },
-          { pubkey: PUMP_PROGRAM_ID, isSigner: false, isWritable: false }
-        ];
-        
-        // Create the buy instruction
-        const buyInstruction = new TransactionInstruction({
-          programId: PUMP_PROGRAM_ID,
-          keys: accounts,
-          data: instructionData
+        const swapResponse = await axios.post(swapUrl, {
+          quoteResponse: quoteData,
+          userPublicKey: keypair.publicKey.toString(),
+          wrapAndUnwrapSol: true  // This handles wrapping SOL automatically
         });
         
-        // Add the instruction to the transaction
-        transaction.add(buyInstruction);
-        
-        // Sign and send the transaction
-        logger.info('Sending pump.fun swap transaction...');
-        
-        // First simulate to check for errors
-        try {
-          const simulation = await connection.simulateTransaction(transaction);
-          if (simulation.value.err) {
-            logger.error(`Simulation failed. Message: ${JSON.stringify(simulation.value.err)}`);
-            logger.error(`Logs: \n${simulation.value.logs?.join('\n')}`);
-            throw new Error(`Simulation failed. Message: ${JSON.stringify(simulation.value.err)}. Logs: \n${simulation.value.logs?.join('\n')}`);
-          }
-          logger.info('Simulation successful, proceeding with transaction');
-        } catch (simError) {
-          logger.error(`Error simulating transaction: ${simError.message}`);
-          throw simError;
+        if (!swapResponse.data || swapResponse.status !== 200) {
+          throw new Error(`Failed to get swap transaction: ${JSON.stringify(swapResponse.data)}`);
         }
         
-        const txSignature = await sendAndConfirmTransaction(
-          connection,
-          transaction,
-          [keypair],
-          {
-            skipPreflight: false,
-            preflightCommitment: 'confirmed',
-            maxRetries: 3
-          }
-        );
+        // Step 3: Execute the swap transaction
+        const { swapTransaction } = swapResponse.data;
         
+        // Deserialize the transaction - handling versioned transaction format
+        const transactionBuffer = Buffer.from(swapTransaction, 'base64');
+        
+        // Correctly create a versioned transaction
+        let transaction;
+        
+        try {
+          // First try to deserialize as a versioned transaction
+          transaction = VersionedTransaction.deserialize(transactionBuffer);
+          logger.info('Transaction deserialized as VersionedTransaction');
+          
+          // Add the keypair as a signer for a versioned transaction
+          transaction.sign([keypair]);
+        } catch (deserializeError) {
+          // If that fails, try the legacy transaction format
+          logger.warn(`Failed to deserialize as VersionedTransaction: ${deserializeError.message}`);
+          logger.info('Trying to deserialize as legacy Transaction');
+          
+          transaction = Transaction.from(transactionBuffer);
+          // For legacy transactions, signing happens during sendAndConfirmTransaction
+        }
+        
+        // Sign and send the transaction based on its type
+        logger.info('Sending transaction...');
+        const startTime = Date.now();
+        
+        let txSignature;
+        
+        if (transaction instanceof VersionedTransaction) {
+          // For versioned transactions, we need to use sendRawTransaction
+          // The transaction is already signed above
+          txSignature = await connection.sendRawTransaction(
+            transaction.serialize(),
+            { maxRetries: 3 }
+          );
+          
+          // Wait for confirmation
+          await connection.confirmTransaction(txSignature, 'confirmed');
+        } else {
+          // For legacy transactions, use sendAndConfirmTransaction which handles signing
+          txSignature = await sendAndConfirmTransaction(
+            connection,
+            transaction,
+            [keypair],
+            {
+              skipPreflight: false,
+              preflightCommitment: 'confirmed',
+              maxRetries: 3
+            }
+          );
+        }
+        
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         logger.info(`Swap transaction successful! Signature: ${txSignature}`);
+        logger.info(`Transaction duration: ${duration} seconds`);
+        logger.info(`Explorer link: https://solscan.io/tx/${txSignature}`);
         
-        // Get transaction details to determine token amount received
-        const txDetails = await connection.getTransaction(txSignature, {
-          commitment: 'confirmed',
-          maxSupportedTransactionVersion: 0
-        });
+        // Get transaction details to verify received tokens
+        let receivedTokenAmount = minTokens; // Default to minimum tokens with slippage
         
-        // Find the token account in the post balances and determine amount received
-        let tokenAmount = 0;
-        if (txDetails && txDetails.meta && txDetails.meta.postTokenBalances) {
-          // Find the buyer's token account in the post balances
-          const buyerTokenBalance = txDetails.meta.postTokenBalances.find(balance => 
-            balance.owner === keypair.publicKey.toString()
-          );
+        try {
+          // Add a small delay to ensure the transaction is indexed
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
-          if (buyerTokenBalance) {
-            tokenAmount = Number(buyerTokenBalance.uiTokenAmount.amount) / 
-                           Math.pow(10, buyerTokenBalance.uiTokenAmount.decimals);
-            logger.info(`Received ${tokenAmount} tokens`);
+          const txDetails = await getEnhancedTransactionDetails(txSignature);
+          
+          // Parse transaction details to get actual tokens received
+          if (txDetails && txDetails.meta && txDetails.meta.postTokenBalances) {
+            const ourTokenBalance = txDetails.meta.postTokenBalances.find(
+              balance => balance.owner === keypair.publicKey.toString() && 
+                        balance.mint === tokenAddress
+            );
+            
+            if (ourTokenBalance) {
+              receivedTokenAmount = parseFloat(ourTokenBalance.uiTokenAmount.uiAmountString);
+              logger.info(`Actual tokens received: ${receivedTokenAmount}`);
+            }
           }
+        } catch (detailsError) {
+          logger.warn(`Error getting transaction details: ${detailsError.message}`);
+          logger.info(`Using estimated token amount: ${minTokens}`);
         }
         
-        // If we couldn't determine the amount, estimate based on a typical rate
-        if (tokenAmount === 0) {
-          tokenAmount = buybackSolAmount * 100000; // Estimate 1 SOL ≈ 100,000 tokens
-          logger.warn(`Couldn't determine exact token amount from transaction, estimating: ${tokenAmount}`);
-        }
-        
-        // Update the reward record
+        // Update reward record
         const rewards = fileStorage.readData(fileStorage.FILES.rewards);
         const updatedRewards = rewards.map(r => {
           if (r.id === rewardId) {
             return {
               ...r,
-              tokensBought: tokenAmount,
+              tokensBought: receivedTokenAmount,
               buyTxSignature: txSignature,
               solAmountUsed: buybackSolAmount,
               solAmountReserved: solAmount - buybackSolAmount,
@@ -383,34 +220,40 @@ const {
         fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
         
         // Create token buy record
-        const buyRecord = {
+        fileStorage.saveRecord('tokenBuys', {
           timestamp: new Date().toISOString(),
           tokenAddress,
           solAmount: buybackSolAmount,
-          tokenAmount: tokenAmount,
+          tokenAmount: receivedTokenAmount,
           txSignature,
           wallet: keypair.publicKey.toString(),
           type: 'buyback',
-          rewardId
-        };
+          rewardId,
+          duration: parseFloat(duration)
+        });
         
-        fileStorage.saveRecord('tokenBuys', buyRecord);
-        
-        logger.info(`Successfully bought ${tokenAmount.toLocaleString()} tokens with ${buybackSolAmount} SOL (tx: ${txSignature})`);
+        logger.info(`Buyback successful! Bought ${receivedTokenAmount} tokens with ${buybackSolAmount} SOL`);
+        logger.info(`Transaction signature: ${txSignature}`);
+        logger.info(`Transaction duration: ${duration} seconds`);
+        logger.info(`Explorer link: https://solscan.io/tx/${txSignature}`);
         
         return {
           success: true,
-          tokenAmount: tokenAmount,
+          tokenAmount: receivedTokenAmount,
           solAmount: buybackSolAmount,
           solAmountReserved: solAmount - buybackSolAmount,
-          txSignature
+          txSignature,
+          duration: parseFloat(duration),
+          explorerUrl: `https://solscan.io/tx/${txSignature}`,
+          network: 'mainnet'
         };
+        
       } catch (swapError) {
         logger.error(`Error executing swap: ${swapError.message}`);
-        throw new Error(`Failed to execute swap: ${swapError.message}`);
+        throw swapError;
       }
     } catch (error) {
-      logger.error('Error executing buyback:', error);
+      logger.error(`Error in buyback process: ${error.message}`);
       
       // Update reward record with error
       if (rewardId) {
@@ -430,12 +273,66 @@ const {
         fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
       }
       
-      return { 
-        success: false, 
-        error: error.message 
-      };
+      return { success: false, error: error.message };
     }
   };
+  
+  /**
+   * Helper function for simulated buyback in test mode
+   */
+  function simulatedBuyback(solAmount, rewardId, buybackSolAmount, tokenAddress, keypair) {
+    logger.info('TEST MODE: Simulating buyback transaction');
+    
+    // Simulate a successful transaction
+    const txSignature = `simulated_buyback_tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const tokenAmount = Math.floor(buybackSolAmount * 100000); // Simulate 1 SOL = 100,000 tokens
+    
+    // Update the reward record
+    const rewards = fileStorage.readData(fileStorage.FILES.rewards);
+    const updatedRewards = rewards.map(r => {
+      if (r.id === rewardId) {
+        return {
+          ...r,
+          tokensBought: tokenAmount,
+          buyTxSignature: txSignature,
+          solAmountUsed: buybackSolAmount,
+          solAmountReserved: solAmount - buybackSolAmount,
+          status: 'bought',
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return r;
+    });
+    
+    fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
+    
+    // Create token buy record
+    const buyRecord = {
+      timestamp: new Date().toISOString(),
+      tokenAddress,
+      solAmount: buybackSolAmount,
+      tokenAmount: tokenAmount,
+      txSignature,
+      wallet: keypair.publicKey.toString(),
+      type: 'buyback',
+      rewardId,
+      mockMode: true
+    };
+    
+    fileStorage.saveRecord('tokenBuys', buyRecord);
+    
+    logger.info(`TEST MODE: Simulated buying ${tokenAmount.toLocaleString()} tokens with ${buybackSolAmount} SOL (tx: ${txSignature})`);
+    
+    // Return simulated result
+    return {
+      success: true,
+      tokenAmount: tokenAmount,
+      solAmount: buybackSolAmount,
+      solAmountReserved: solAmount - buybackSolAmount,
+      txSignature,
+      testMode: true
+    };
+  }
   
   module.exports = {
     executeBuyback

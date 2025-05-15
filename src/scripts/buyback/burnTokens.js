@@ -1,187 +1,166 @@
 /**
- * Token burning utility for $INFERNO token
- * Part of the buyback system
+ * Fixed burnTokens function with proper decimal handling
+ * To replace the existing function in src/scripts/utils/solana.js
  */
-const logger = require('../utils/logger').buyback;
-const fileStorage = require('../utils/fileStorage');
-const { createKeypair, burnTokens, getEnhancedTransactionDetails } = require('../utils/solana');
-const { updateMetricsAfterBurn } = require('./utils/metrics');
-require('dotenv').config();
-
-/**
- * Burn tokens purchased from buyback
- * @param {Number} tokenAmount - Amount of tokens to burn
- * @param {String} rewardId - Storage ID of the reward record
- * @returns {Promise<Object>} Burn result
- */
-const burnBuybackTokens = async (tokenAmount, rewardId) => {
-  try {
-    logger.info(`Burning ${tokenAmount} tokens from buyback`);
-    
-    // Get keypair
-    const keypair = createKeypair();
-    
-    // Execute burn with retry mechanism for Helius
-    const maxRetries = 3;
-    let retryCount = 0;
-    let burnResult;
-    
-    while (retryCount < maxRetries) {
-      try {
-        // Execute burn with Helius-optimized parameters
-        burnResult = await burnTokens(
-          keypair, 
-          tokenAmount,
-          process.env.TOKEN_ADDRESS,
-          'buyback'
-        );
-        
-        if (burnResult.success) {
-          break; // Success, exit retry loop
-        } else {
-          // Check if this is a recoverable error (rate limit, etc.)
-          const isRateLimitError = burnResult.error && 
-            (burnResult.error.includes('429') || 
-             burnResult.error.includes('rate limit') ||
-             burnResult.error.includes('too many requests'));
-             
-          if (isRateLimitError && retryCount < maxRetries - 1) {
-            // Exponential backoff
-            const backoffMs = Math.pow(2, retryCount) * 1000;
-            logger.warn(`Rate limit reached, retrying in ${backoffMs}ms (attempt ${retryCount + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, backoffMs));
-            retryCount++;
-          } else {
-            // Non-recoverable error or max retries reached
-            logger.error(`Failed to burn tokens: ${burnResult.error}`);
-            
-            // Update reward record with error
-            if (rewardId) {
-              const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-              const updatedRewards = rewards.map(r => {
-                if (r.id === rewardId) {
-                  return {
-                    ...r,
-                    status: 'failed',
-                    errorMessage: burnResult.error,
-                    updatedAt: new Date().toISOString()
-                  };
-                }
-                return r;
-              });
-              
-              fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-            }
-            
-            return burnResult;
-          }
-        }
-      } catch (err) {
-        // Handle unexpected errors in the burn function
-        logger.error(`Unexpected error during burn (attempt ${retryCount + 1}/${maxRetries}):`, err);
-        
-        if (retryCount < maxRetries - 1) {
-          const backoffMs = Math.pow(2, retryCount) * 1000;
-          await new Promise(resolve => setTimeout(resolve, backoffMs));
-          retryCount++;
-        } else {
-          throw err; // Re-throw if max retries reached
-        }
-      }
-    }
-    
-    if (!burnResult || !burnResult.success) {
-      logger.error('Failed to burn tokens after maximum retries');
-      return { success: false, error: 'Maximum retry attempts reached' };
-    }
-    
-    // Get detailed transaction information from Helius
-    let txDetails;
-    
+const { 
+    Connection, 
+    PublicKey, 
+    Keypair,
+    TransactionInstruction,
+    Transaction,
+    sendAndConfirmTransaction
+  } = require('@solana/web3.js');
+  const { 
+    burn,
+    getOrCreateAssociatedTokenAccount,
+    getMint
+  } = require('@solana/spl-token');
+  const logger = require('./logger');
+  require('dotenv').config();
+  
+  // Token decimals from environment or default to 6 (most common)
+  const TOKEN_DECIMALS = parseInt(process.env.TOKEN_DECIMALS || "6");
+  
+  /**
+   * Burn tokens using SPL Token burn function with proper decimal handling
+   * This is a direct replacement for the existing burnTokens function
+   * 
+   * @param {Keypair} senderKeypair - Keypair of the sender
+   * @param {Number} amount - Amount of tokens to burn (human-readable)
+   * @param {String} tokenAddress - Token mint address
+   * @param {String} burnType - Type of burn ('milestone' or 'buyback')
+   * @returns {Promise<Object>} Transaction result
+   */
+  const burnTokens = async (
+    senderKeypair,
+    amount,
+    tokenAddress = process.env.TOKEN_ADDRESS,
+    burnType = 'general'
+  ) => {
     try {
-      txDetails = await getEnhancedTransactionDetails(burnResult.signature);
-      logger.info('Retrieved enhanced transaction details from Helius');
-    } catch (txError) {
-      logger.warn(`Could not retrieve enhanced transaction details: ${txError.message}`);
-      // Continue even if we can't get enhanced details
-    }
-    
-    // Create burn record with enhanced data if available
-    const burnRecord = {
-      burnType: 'buyback',
-      amount: tokenAmount,
-      txSignature: burnResult.signature,
-      initiator: 'buyback-script',
-      timestamp: new Date().toISOString(),
-      details: {
-        source: 'creator-rewards',
-        rewardId,
-        blockTime: txDetails?.blockTime ? new Date(txDetails.blockTime * 1000).toISOString() : null,
-        fee: txDetails?.meta?.fee || null,
-        slot: txDetails?.slot || null,
-        // Include any Helius-specific data
-        heliusData: txDetails ? {
-          tokenTransfers: txDetails.meta?.tokenTransfers || null,
-          accountData: txDetails.meta?.loadedAddresses || null,
-        } : null
-      }
-    };
-    
-    const savedBurn = fileStorage.saveRecord('burns', burnRecord);
-    
-    // Update reward record
-    const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-    const updatedRewards = rewards.map(r => {
-      if (r.id === rewardId) {
-        return {
-          ...r,
-          tokensBurned: tokenAmount,
-          burnTxSignature: burnResult.signature,
-          status: 'burned',
-          burnId: savedBurn.id,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return r;
-    });
-    
-    fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
-    
-    // Update metrics
-    await updateMetricsAfterBurn(tokenAmount, 'buyback');
-    
-    logger.info(`Successfully burned ${tokenAmount} tokens (tx: ${burnResult.signature})`);
-    return {
-      success: true,
-      amount: tokenAmount,
-      txSignature: burnResult.signature,
-      burnId: savedBurn.id
-    };
-  } catch (error) {
-    logger.error('Error burning buyback tokens:', error);
-    
-    // Update reward record with error
-    if (rewardId) {
-      const rewards = fileStorage.readData(fileStorage.FILES.rewards);
-      const updatedRewards = rewards.map(r => {
-        if (r.id === rewardId) {
-          return {
-            ...r,
-            status: 'failed',
-            errorMessage: error.message,
-            updatedAt: new Date().toISOString()
-          };
-        }
-        return r;
+      const connection = new Connection(process.env.SOLANA_RPC_URL, {
+        commitment: 'confirmed',
+        confirmTransactionInitialTimeout: 60000 // 60 seconds
       });
       
-      fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
+      // Use burn address from environment or fall back to standard address
+      const burnAddress = process.env.BURN_ADDRESS || "1nc1nerator11111111111111111111111111111111";
+      
+      // Convert tokenAddress to PublicKey
+      const tokenMint = new PublicKey(tokenAddress);
+      
+      // Check wallet balance before proceeding
+      logger.info(`Checking wallet balance for ${burnType} burn`);
+      
+      // Get the mint info to determine decimals
+      let tokenDecimals = TOKEN_DECIMALS;
+      try {
+        const mintInfo = await getMint(connection, tokenMint);
+        tokenDecimals = mintInfo.decimals;
+        logger.info(`Detected token decimals: ${tokenDecimals}`);
+      } catch (error) {
+        logger.warn(`Could not detect token decimals, using default: ${TOKEN_DECIMALS}. Error: ${error.message}`);
+      }
+      
+      // Get the sender's token account
+      let userTokenAccount;
+      try {
+        userTokenAccount = await getOrCreateAssociatedTokenAccount(
+          connection,
+          senderKeypair,
+          tokenMint,
+          senderKeypair.publicKey
+        );
+        
+        logger.info(`Found token account: ${userTokenAccount.address.toString()}`);
+      } catch (error) {
+        logger.error(`Error getting token account: ${error.message}`);
+        return {
+          success: false,
+          error: 'TOKEN_ACCOUNT_ERROR',
+          details: error.message
+        };
+      }
+      
+      // Safety check: Verify there are sufficient tokens in the wallet
+      if (userTokenAccount.amount < amount) {
+        logger.error(`Insufficient tokens in ${burnType} wallet. Required: ${amount.toLocaleString()}, Available: ${userTokenAccount.amount}`);
+        return {
+          success: false,
+          error: 'INSUFFICIENT_TOKENS',
+          details: {
+            required: amount,
+            available: userTokenAccount.amount.toString(),
+            walletType: burnType
+          }
+        };
+      }
+      
+      logger.info(`Sufficient tokens available in ${burnType} wallet. Required: ${amount.toLocaleString()}, Available: ${userTokenAccount.amount}`);
+      
+      // Convert amount to raw amount with decimals
+      const rawAmount = amount * Math.pow(10, tokenDecimals);
+      logger.info(`Converting ${amount.toLocaleString()} tokens to ${rawAmount.toLocaleString()} raw units (${tokenDecimals} decimals)`);
+      
+      try {
+        // Execute the burn transaction using the SPL Token burn function
+        logger.info(`Burning ${amount.toLocaleString()} tokens from account ${userTokenAccount.address.toString()}`);
+        
+        const signature = await burn(
+          connection,
+          senderKeypair,              // payer
+          userTokenAccount.address,   // account
+          tokenMint,                  // mint
+          senderKeypair,              // owner
+          rawAmount                   // amount with decimals
+        );
+        
+        logger.info(`Burned ${amount.toLocaleString()} tokens successfully! Signature: ${signature}`);
+        
+        // Return success result in the format expected by the existing system
+        return {
+          success: true,
+          signature,
+          amount,
+          rawAmount,
+          decimals: tokenDecimals,
+          sender: senderKeypair.publicKey.toString(),
+          burnAddress,
+          memo: `$INFERNO ${burnType.toUpperCase()} BURN: ${amount.toLocaleString()} tokens`
+        };
+      } catch (txError) {
+        // Handle transaction errors with the same error categorization as before
+        logger.error(`Transaction failed: ${txError.message}`);
+        
+        let errorType = 'UNKNOWN';
+        const errorMessage = txError.message || '';
+        
+        if (errorMessage.includes('insufficient funds')) {
+          errorType = 'INSUFFICIENT_FUNDS';
+        } else if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+          errorType = 'RATE_LIMIT';
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+          errorType = 'TIMEOUT';
+        } else if (errorMessage.includes('blockhash not found') || errorMessage.includes('old blockhash')) {
+          errorType = 'BLOCKHASH_EXPIRED';
+        } else if (errorMessage.includes('network error') || errorMessage.includes('connection error')) {
+          errorType = 'NETWORK_ERROR';
+        }
+        
+        return {
+          success: false,
+          error: errorType,
+          details: errorMessage
+        };
+      }
+    } catch (error) {
+      logger.error('Error in burn process:', error);
+      return {
+        success: false,
+        error: 'PROCESSING_ERROR',
+        details: error.message
+      };
     }
-    
-    return { success: false, error: error.message };
-  }
-};
-
-module.exports = {
-  burnBuybackTokens
-};
+  };
+  
+  module.exports = { burnTokens };

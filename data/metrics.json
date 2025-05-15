@@ -10,5 +10,14 @@
     "buybackBurned": 0,
     "milestoneBurned": 0,
     "marketCap": 0
+  },
+  {
+    "id": "1747325302645-ojswh1u",
+    "timestamp": "2025-05-15T16:08:22.645Z",
+    "totalSupply": 1000000000,
+    "circulatingSupply": 699990000,
+    "totalBurned": 10000,
+    "buybackBurned": 0,
+    "milestoneBurned": 10000
   }
 ]

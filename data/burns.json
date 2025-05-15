@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "1747325302642-1fva3aa",
+    "timestamp": "2025-05-15T16:08:22.641Z",
+    "burnAmount": 10000,
+    "burnType": "milestone",
+    "transactionHash": "5w9kmsAJYhPPXvVHr3RYZgCQRr2Js9nvZGcuyDG7FtBz5spGKQDgXVhb9Ay7pN6nR2vHphNLLMVYUaGce3hcHRJc",
+    "initiator": "manual-burn-script"
+  }
+]
