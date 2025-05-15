@@ -6,5 +6,61 @@
     "burnType": "milestone",
     "transactionHash": "5w9kmsAJYhPPXvVHr3RYZgCQRr2Js9nvZGcuyDG7FtBz5spGKQDgXVhb9Ay7pN6nR2vHphNLLMVYUaGce3hcHRJc",
     "initiator": "manual-burn-script"
+  },
+  {
+    "id": "1747328526265-hjsithn",
+    "timestamp": "2025-05-15T17:02:06.265Z",
+    "burnType": "milestone",
+    "burnAmount": 10,
+    "txSignature": "5CX5Lx7VfVpjtGFMpx1875FyAEoJjsNjdvw34EEuSCGwSUnz4TRZZrP76wABohAr8M7AAnDPZNfoXZJkxfmk8YVB",
+    "initiator": "milestone-script",
+    "marketCapAtBurn": 4765.31287714899,
+    "milestone": 4000,
+    "details": {
+      "milestoneName": "$4 000 Market Cap",
+      "percentOfSupply": 1,
+      "blockTime": "2025-05-15T17:02:04.000Z",
+      "fee": 5000,
+      "slot": 340219102,
+      "decimals": 6,
+      "rawAmount": 10000000
+    }
+  },
+  {
+    "id": "1747328538037-4gtqr7y",
+    "timestamp": "2025-05-15T17:02:18.037Z",
+    "burnType": "milestone",
+    "burnAmount": 100,
+    "txSignature": "5eTjqnyQ6gMYcHtGCjcd3tCLpKFrTBCJDjJmqw8bDpePpQRXBrYuq8P9BQZ1fdjWYthpGswDka3Ge5UfUNa24Erz",
+    "initiator": "milestone-script",
+    "marketCapAtBurn": 4765.31287714899,
+    "milestone": 4500,
+    "details": {
+      "milestoneName": "$4 500 Market Cap",
+      "percentOfSupply": 1,
+      "blockTime": "2025-05-15T17:02:17.000Z",
+      "fee": 5000,
+      "slot": 340219131,
+      "decimals": 6,
+      "rawAmount": 100000000
+    }
+  },
+  {
+    "id": "1747329380028-9y6silm",
+    "timestamp": "2025-05-15T17:16:20.028Z",
+    "burnType": "buyback",
+    "burnAmount": 1000,
+    "txSignature": "57dbfpFnpdLw5E2Sd5gv4xUzZpp6KeooRHfbUsXtKogfUVPebb1d35hegSQLM3GrsTnfvdgNwmSjWaqyWUueKmzD",
+    "initiator": "buyback-script",
+    "solSpent": 0,
+    "solSpentUsd": 0,
+    "rewardId": "test",
+    "details": {
+      "blockTime": null,
+      "fee": null,
+      "slot": null,
+      "decimals": 6,
+      "rawAmount": 1000000000
+    }
   }
 ]

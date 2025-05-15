@@ -11,7 +11,7 @@ const fileStorage = require('../utils/fileStorage');
 const { checkAvailableRewards } = require('./checkRewards');
 const { claimRewards } = require('./claimRewards');
 const { executeBuyback } = require('./executeBuyback');
-const { burnBuybackTokens } = require('./burnTokens');
+const { burnBuybackTokens } = require('./burnBuyBackTokens');
 
 require('dotenv').config();
 

@@ -22,25 +22,20 @@ const getLatestMetrics = () => {
 /**
  * Create initial metrics when none exist
  * @param {Number} burnAmount - Amount of tokens burned
- * @param {String} burnType - Type of burn ('buyback' or 'milestone')
  * @returns {Object} Created metrics record
  */
-const createInitialMetrics = (burnAmount, burnType) => {
+const createInitialMetrics = (burnAmount) => {
   const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
   const reservePercentage = 0.3; // Default 30% reserve
   
   const newMetrics = {
     timestamp: new Date().toISOString(),
     totalSupply: initialSupply - burnAmount,
-    circulatingSupply: burnType === 'buyback' 
-      ? initialSupply - burnAmount - (initialSupply * reservePercentage)
-      : initialSupply - (initialSupply * reservePercentage),
-    reserveWalletBalance: burnType === 'milestone'
-      ? initialSupply * reservePercentage - burnAmount
-      : initialSupply * reservePercentage,
+    circulatingSupply: initialSupply - burnAmount - (initialSupply * reservePercentage),
+    reserveWalletBalance: initialSupply * reservePercentage,
     totalBurned: burnAmount,
-    buybackBurned: burnType === 'buyback' ? burnAmount : 0,
-    milestoneBurned: burnType === 'milestone' ? burnAmount : 0
+    buybackBurned: burnAmount,
+    milestoneBurned: 0
   };
   
   return fileStorage.saveRecord('metrics', newMetrics);
@@ -50,26 +45,17 @@ const createInitialMetrics = (burnAmount, burnType) => {
  * Calculate updated metrics based on current metrics and new burn
  * @param {Object} latestMetrics - Current metrics
  * @param {Number} burnAmount - Amount of tokens burned
- * @param {String} burnType - Type of burn ('buyback' or 'milestone')
  * @returns {Object} Updated metrics
  */
-const calculateUpdatedMetrics = (latestMetrics, burnAmount, burnType) => {
+const calculateUpdatedMetrics = (latestMetrics, burnAmount) => {
   return {
     timestamp: new Date().toISOString(),
     totalSupply: latestMetrics.totalSupply - burnAmount,
-    circulatingSupply: burnType === 'buyback' 
-      ? latestMetrics.circulatingSupply - burnAmount 
-      : latestMetrics.circulatingSupply,
-    reserveWalletBalance: burnType === 'milestone'
-      ? latestMetrics.reserveWalletBalance - burnAmount
-      : latestMetrics.reserveWalletBalance,
+    circulatingSupply: latestMetrics.circulatingSupply - burnAmount,
+    reserveWalletBalance: latestMetrics.reserveWalletBalance,
     totalBurned: latestMetrics.totalBurned + burnAmount,
-    buybackBurned: burnType === 'buyback' 
-      ? (latestMetrics.buybackBurned || 0) + burnAmount 
-      : (latestMetrics.buybackBurned || 0),
-    milestoneBurned: burnType === 'milestone' 
-      ? (latestMetrics.milestoneBurned || 0) + burnAmount 
-      : (latestMetrics.milestoneBurned || 0),
+    buybackBurned: (latestMetrics.buybackBurned || 0) + burnAmount,
+    milestoneBurned: latestMetrics.milestoneBurned || 0,
     priceInSol: latestMetrics.priceInSol,
     priceInUsd: latestMetrics.priceInUsd,
     marketCap: latestMetrics.marketCap
@@ -77,14 +63,13 @@ const calculateUpdatedMetrics = (latestMetrics, burnAmount, burnType) => {
 };
 
 /**
- * Update token metrics after a burn
+ * Update token metrics after a buyback burn
  * @param {Number} burnAmount - Amount of tokens burned
- * @param {String} burnType - Type of burn ('buyback' or 'milestone')
  * @returns {Promise<Object>} Updated metrics
  */
-const updateMetricsAfterBurn = async (burnAmount, burnType = 'buyback') => {
+const updateMetricsAfterBurn = async (burnAmount) => {
   try {
-    logger.info(`Updating metrics after ${burnType} burn of ${burnAmount} tokens`);
+    logger.info(`Updating metrics after buyback burn of ${burnAmount} tokens`);
     
     // Get current metrics
     const latestMetrics = getLatestMetrics();
@@ -92,26 +77,24 @@ const updateMetricsAfterBurn = async (burnAmount, burnType = 'buyback') => {
     // If no metrics exist, create a new baseline
     if (!latestMetrics) {
       logger.info('No existing metrics found, creating initial metrics');
-      return createInitialMetrics(burnAmount, burnType);
+      return createInitialMetrics(burnAmount);
     }
     
     // Create new metrics entry
-    const newMetrics = calculateUpdatedMetrics(latestMetrics, burnAmount, burnType);
+    const newMetrics = calculateUpdatedMetrics(latestMetrics, burnAmount);
     
     // Save updated metrics
     const savedMetrics = fileStorage.saveRecord('metrics', newMetrics);
     
-    logger.info('Metrics updated successfully');
+    logger.info('Metrics updated successfully after buyback burn');
     return savedMetrics;
   } catch (error) {
-    logger.error(`Error updating metrics: ${error}`);
+    logger.error(`Error updating metrics: ${error.message}`);
     throw error;
   }
 };
 
 module.exports = {
   getLatestMetrics,
-  createInitialMetrics,
-  calculateUpdatedMetrics,
   updateMetricsAfterBurn
 };

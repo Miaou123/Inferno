@@ -19,5 +19,25 @@
     "totalBurned": 10000,
     "buybackBurned": 0,
     "milestoneBurned": 10000
+  },
+  {
+    "id": "1747328526266-8uza89m",
+    "timestamp": "2025-05-15T17:02:06.266Z",
+    "totalSupply": 999999990,
+    "circulatingSupply": 699990000,
+    "reserveWalletBalance": null,
+    "totalBurned": 10010,
+    "buybackBurned": 0,
+    "milestoneBurned": 10010
+  },
+  {
+    "id": "1747328538038-gqrrk17",
+    "timestamp": "2025-05-15T17:02:18.038Z",
+    "totalSupply": 999999890,
+    "circulatingSupply": 699990000,
+    "reserveWalletBalance": -100,
+    "totalBurned": 10110,
+    "buybackBurned": 0,
+    "milestoneBurned": 10110
   }
 ]

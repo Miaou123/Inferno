@@ -1,1 +1,78 @@
-[]
+[
+  {
+    "id": "milestone-4000",
+    "marketCap": 4000,
+    "burnAmount": 10,
+    "percentOfSupply": 1,
+    "completed": true,
+    "createdAt": "2025-05-15T17:01:17.260Z",
+    "txSignature": "5CX5Lx7VfVpjtGFMpx1875FyAEoJjsNjdvw34EEuSCGwSUnz4TRZZrP76wABohAr8M7AAnDPZNfoXZJkxfmk8YVB",
+    "completedAt": "2025-05-15T17:02:06.266Z"
+  },
+  {
+    "id": "milestone-4500",
+    "marketCap": 4500,
+    "burnAmount": 100,
+    "percentOfSupply": 1,
+    "completed": true,
+    "createdAt": "2025-05-15T17:01:17.260Z",
+    "txSignature": "5eTjqnyQ6gMYcHtGCjcd3tCLpKFrTBCJDjJmqw8bDpePpQRXBrYuq8P9BQZ1fdjWYthpGswDka3Ge5UfUNa24Erz",
+    "completedAt": "2025-05-15T17:02:18.038Z"
+  },
+  {
+    "id": "milestone-5000",
+    "marketCap": 5000,
+    "burnAmount": 10,
+    "percentOfSupply": 1,
+    "completed": false,
+    "createdAt": "2025-05-15T17:01:17.260Z"
+  },
+  {
+    "id": "milestone-5500",
+    "marketCap": 5500,
+    "burnAmount": 20,
+    "percentOfSupply": 1.5,
+    "completed": false,
+    "createdAt": "2025-05-15T17:01:17.260Z"
+  },
+  {
+    "id": "milestone-7000",
+    "marketCap": 7000,
+    "burnAmount": 15000000,
+    "percentOfSupply": 1.5,
+    "completed": false,
+    "createdAt": "2025-05-15T17:01:17.260Z"
+  },
+  {
+    "id": "milestone-80000",
+    "marketCap": 80000,
+    "burnAmount": 20000000,
+    "percentOfSupply": 2,
+    "completed": false,
+    "createdAt": "2025-05-15T17:01:17.260Z"
+  },
+  {
+    "id": "milestone-90000",
+    "marketCap": 90000,
+    "burnAmount": 20000000,
+    "percentOfSupply": 2,
+    "completed": false,
+    "createdAt": "2025-05-15T17:01:17.260Z"
+  },
+  {
+    "id": "milestone-100000",
+    "marketCap": 100000,
+    "burnAmount": 25000000,
+    "percentOfSupply": 2.5,
+    "completed": false,
+    "createdAt": "2025-05-15T17:01:17.260Z"
+  },
+  {
+    "id": "milestone-120000",
+    "marketCap": 120000,
+    "burnAmount": 25000000,
+    "percentOfSupply": 2.5,
+    "completed": false,
+    "createdAt": "2025-05-15T17:01:17.260Z"
+  }
+]
