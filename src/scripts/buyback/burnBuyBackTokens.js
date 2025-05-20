@@ -51,6 +51,11 @@ const burnBuybackTokens = async (
     // Convert tokenAddress to PublicKey
     const tokenMint = new PublicKey(tokenAddress);
     
+    // Apply a 1% safety buffer to the quoted amount
+    // This helps avoid "insufficient funds" errors if the actual received amount is slightly less
+    const safeAmount = Math.floor(amount * 0.99); // 1% safety buffer
+    logger.info(`Applying 1% safety buffer: ${amount} → ${safeAmount} tokens`);
+    
     // Check wallet balance before proceeding
     logger.info(`Checking wallet balance for buyback burn`);
     
@@ -85,27 +90,27 @@ const burnBuybackTokens = async (
     }
     
     // Safety check: Verify there are sufficient tokens in the wallet
-    if (userTokenAccount.amount < amount) {
-      logger.error(`Insufficient tokens in buyback wallet. Required: ${amount.toLocaleString()}, Available: ${userTokenAccount.amount}`);
+    if (userTokenAccount.amount < safeAmount * Math.pow(10, tokenDecimals)) {
+      logger.error(`Insufficient tokens in buyback wallet. Required: ${safeAmount.toLocaleString()}, Available: ${(userTokenAccount.amount / Math.pow(10, tokenDecimals)).toLocaleString()}`);
       return {
         success: false,
         error: 'INSUFFICIENT_TOKENS',
         details: {
-          required: amount,
-          available: userTokenAccount.amount.toString()
+          required: safeAmount,
+          available: (userTokenAccount.amount / Math.pow(10, tokenDecimals)).toString()
         }
       };
     }
     
-    logger.info(`Sufficient tokens available in buyback wallet. Required: ${amount.toLocaleString()}, Available: ${userTokenAccount.amount}`);
+    logger.info(`Sufficient tokens available in buyback wallet. Required: ${safeAmount.toLocaleString()}, Available: ${userTokenAccount.amount}`);
     
     // Convert amount to raw amount with decimals
-    const rawAmount = amount * Math.pow(10, tokenDecimals);
-    logger.info(`Converting ${amount.toLocaleString()} tokens to ${rawAmount.toLocaleString()} raw units (${tokenDecimals} decimals)`);
+    const rawAmount = safeAmount * Math.pow(10, tokenDecimals);
+    logger.info(`Converting ${safeAmount.toLocaleString()} tokens to ${rawAmount.toLocaleString()} raw units (${tokenDecimals} decimals)`);
     
     try {
       // Execute the burn transaction using the SPL Token burn function
-      logger.info(`Burning ${amount.toLocaleString()} tokens from account ${userTokenAccount.address.toString()}`);
+      logger.info(`Burning ${safeAmount.toLocaleString()} tokens from account ${userTokenAccount.address.toString()}`);
       
       const signature = await burn(
         connection,

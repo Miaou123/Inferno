@@ -512,7 +512,7 @@ const startMilestoneMonitoring = async () => {
     await checkMilestones();
     
     // Schedule regular checks (every 5 minutes)
-    cron.schedule('*/5 * * * *', async () => {
+    cron.schedule('*/1 * * * *', async () => {
       logger.info('Running scheduled milestone check');
       await checkMilestones();
     });
