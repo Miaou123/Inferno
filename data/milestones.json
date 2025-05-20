@@ -24,8 +24,10 @@
     "marketCap": 5000,
     "burnAmount": 10,
     "percentOfSupply": 1,
-    "completed": false,
-    "createdAt": "2025-05-15T17:01:17.260Z"
+    "completed": true,
+    "createdAt": "2025-05-15T17:01:17.260Z",
+    "txSignature": "2Pg7crZLBxqoRV7eBbTB2cfdiKf5BaiKWVvh9nsCZJAxq8A3FqMvYicv6JvKiRfj3hX8wZG9XGijxJRQRG1oXo1y",
+    "completedAt": "2025-05-15T17:45:03.001Z"
   },
   {
     "id": "milestone-5500",

@@ -62,5 +62,24 @@
       "decimals": 6,
       "rawAmount": 1000000000
     }
+  },
+  {
+    "id": "1747331103001-zuwh8a9",
+    "timestamp": "2025-05-15T17:45:03.000Z",
+    "burnType": "milestone",
+    "burnAmount": 10,
+    "txSignature": "2Pg7crZLBxqoRV7eBbTB2cfdiKf5BaiKWVvh9nsCZJAxq8A3FqMvYicv6JvKiRfj3hX8wZG9XGijxJRQRG1oXo1y",
+    "initiator": "milestone-script",
+    "marketCapAtBurn": 5125.630548612789,
+    "milestone": 5000,
+    "details": {
+      "milestoneName": "$5 000 Market Cap",
+      "percentOfSupply": 1,
+      "blockTime": null,
+      "fee": null,
+      "slot": null,
+      "decimals": 6,
+      "rawAmount": 10000000
+    }
   }
 ]

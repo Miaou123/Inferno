@@ -89,18 +89,6 @@ app.get('/api/metrics', async (req, res) => {
     const milestones = fileStorage.readData(fileStorage.FILES.milestones);
     const completedMilestones = milestones.filter(m => m.completed).length;
     
-    // Log toutes les valeurs importantes
-    console.log("============ VALEURS DU SITE ============");
-    console.log(`Market Cap: $${marketCap.toLocaleString()}`);
-    console.log(`Total Burned: ${totalBurned.toLocaleString()} tokens`);
-    console.log(`Burn Percentage: ${((totalBurned / 1000000000) * 100).toFixed(2)}%`);
-    console.log(`Completed Milestones: ${completedMilestones} of ${milestones.length}`);
-    
-    // Log des différentes collections
-    console.log(`Nombre total de burns: ${burns.length}`);
-    console.log(`Nombre total de metrics: ${metrics.length}`);
-    console.log(`Nombre total de milestones: ${milestones.length}`);
-    
     // Construire la réponse
     const responseData = {
       marketCap: marketCap,
@@ -113,10 +101,6 @@ app.get('/api/metrics', async (req, res) => {
     if (latestMetrics) {
       responseData.metrics = latestMetrics;
     }
-    
-    // Log de la réponse complète
-    console.log("============ API RESPoNSE ============");
-    console.log(JSON.stringify(responseData, null, 2));
     
     res.json({
       success: true,
@@ -145,12 +129,6 @@ app.get('/api/simple-burn', async (req, res) => {
     
     // Calculate percentage
     const burnPercentage = (totalBurned / initialSupply * 100).toFixed(2);
-    
-    console.log("Simple burn calculation from burnTracker:");
-    console.log("- Initial Supply:", initialSupply);
-    console.log("- Circulating Supply:", circulatingSupply);
-    console.log("- Burn Amount:", totalBurned);
-    console.log("- Burn Percentage:", burnPercentage + "%");
     
     res.json({
       initialSupply,
@@ -253,8 +231,8 @@ app.get('/api/burn-stats', (req, res) => {
 });
 
 app.get('/api/token-address', (req, res) => {
-  // Override the environment variable directly
-  const tokenAddress = "HJ2n2a3YK1LTBCRbS932cTtmXw4puhgG8Jb2WcpEpump";
+  // Get token address from environment variable
+  const tokenAddress = process.env.TOKEN_ADDRESS || "HJ2n2a3YK1LTBCRbS932cTtmXw4puhgG8Jb2WcpEpump";
   
   return res.json({ 
     tokenAddress, 
@@ -294,8 +272,6 @@ app.get('/api/debug', (req, res) => {
 // Modifiez votre endpoint /api/burns pour plus de clarté
 app.get('/api/burns', async (req, res) => {
   try {
-    console.log("\n\n==== API DEBUG: /api/burns ====");
-    console.log("Request time:", new Date().toISOString());
     
     // Désactivation forcée du cache
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
@@ -337,10 +313,7 @@ app.get('/api/burns', async (req, res) => {
       
       return res.json(response);
     }
-    
-    // Si on a des données, continuons normalement
-    if (allBurns.length > 0) console.log(JSON.stringify(allBurns[0]));
-    if (allBurns.length > 1) console.log(JSON.stringify(allBurns[1]));
+  
     
     // Tri, filtrage et pagination comme avant
     const page = parseInt(req.query.page) || 1;
@@ -377,19 +350,15 @@ app.get('/api/burns', async (req, res) => {
 // Updated /api/milestones endpoint in server.js
 app.get('/api/milestones', async (req, res) => {
   try {
-    console.log("==== API DEBUG: /api/milestones ====");
     // Get all milestones
     const milestones = fileStorage.readData(fileStorage.FILES.milestones);
-    console.log(`Found ${milestones.length} milestones in storage`);
     milestones.sort((a, b) => a.marketCap - b.marketCap);
     
     // Get current market cap
     const currentMarketCap = await getMarketCap();
-    console.log(`Current market cap: ${currentMarketCap}`);
     
     // Get milestone stats directly from burnTracker
     const milestoneData = burnTracker.getMilestoneData();
-    console.log("Milestone data from burnTracker:", milestoneData);
     
     // Enhance with progress information
     const enhancedMilestones = milestones.map(milestone => {
@@ -405,13 +374,11 @@ app.get('/api/milestones', async (req, res) => {
     
     // Find next milestone
     const nextMilestone = enhancedMilestones.find(m => !m.completed);
-    console.log("Next milestone:", nextMilestone ? nextMilestone.marketCap : "none");
     
     // Calculate progress towards next milestone if there is one
     let nextMilestoneProgress = 0;
     if (nextMilestone) {
       nextMilestoneProgress = Math.min(Math.round((currentMarketCap / nextMilestone.marketCap) * 100), 99);
-      console.log(`Progress towards next milestone: ${nextMilestoneProgress}%`);
     }
     
     // Get total burned milestone data from burns directly
@@ -419,7 +386,6 @@ app.get('/api/milestones', async (req, res) => {
       .filter(burn => burn.burnType === 'milestone');
     
     const totalMilestoneBurned = milestoneBurns.reduce((sum, burn) => sum + (burn.burnAmount || 0), 0);
-    console.log(`Total milestone burned (from burns records): ${totalMilestoneBurned.toLocaleString()} tokens`);
     
     // Calculate percentage of supply burned via milestones
     const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
@@ -441,7 +407,6 @@ app.get('/api/milestones', async (req, res) => {
       }
     };
     
-    console.log("Sending milestone response data");
     res.json(responseData);
   } catch (error) {
     console.error(`Error fetching milestones: ${error}`);

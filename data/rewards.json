@@ -360,5 +360,27 @@
     "solAmountReserved": 0.0050000000000000044,
     "status": "bought",
     "updatedAt": "2025-05-15T15:52:55.623Z"
+  },
+  {
+    "id": "1747753030222-isxobrr",
+    "timestamp": "2025-05-20T14:57:10.215Z",
+    "rewardAmount": 0.001934542,
+    "rewardAmountUsd": 0.3215208804,
+    "isProcessed": false,
+    "claimTxSignature": "5QuzVnDEVA7mJ3p5MS15nP2RrVAeZLCUEVYMerQ3v56PqhKssPwBRgKMw4txF5e5b4XnfW2AM8nZfkooSJjAyY2X"
+  },
+  {
+    "id": "1747753308858-av3huwe",
+    "timestamp": "2025-05-20T15:01:48.858Z",
+    "rewardAmount": 0.001296977,
+    "rewardAmountUsd": 0.21489611912999998,
+    "isProcessed": false,
+    "claimTxSignature": "5e7fTWJqcNXnovPF7ChzFKPSBjiQEF9MLfYvWHjsj6euT1Ngg5tYYL8H8xbQ7RCpeHZhajs6oxyesYSphayptcus",
+    "tokensBought": 17460884.718419,
+    "buyTxSignature": "kiNb9bX7FBzibMKn1mxYabtHujJQPQW39nG8tTWYvpVx6moP3UeGF2fK2sXpZYzHkCrKybmXuL3b1D4CvCAWsnM",
+    "solAmountUsed": 0.00123212815,
+    "solAmountReserved": 0.00006484885000000002,
+    "status": "bought",
+    "updatedAt": "2025-05-20T15:01:51.794Z"
   }
 ]

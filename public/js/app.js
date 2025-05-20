@@ -69,6 +69,14 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 async function initializeDashboard() {
     try {
+        
+        // Fetch token address first
+        const tokenAddress = await fetchTokenAddress();
+        if (tokenAddress) {
+            updateTokenAddress(tokenAddress);
+            updateTokenLinks(tokenAddress);
+        }
+                
         // Fetch initial data
         await fetchAndUpdateMetrics();
         await fetchAndUpdateMilestones();
@@ -1107,19 +1115,24 @@ async function updateDisplayValues() {
 }
 
 /**
- * Fetch token address from API
- */
+* Fetch token address from dedicated endpoint
+* @returns {Promise<string|null>} Token address or null
+*/
 async function fetchTokenAddress() {
-    try {
-        const response = await fetch('/api/token-address');
-        if (!response.ok) return null;
-        
-        const data = await response.json();
-        return data.success && data.tokenAddress ? data.tokenAddress : null;
-    } catch (error) {
-        console.error("Error fetching token address:", error);
-        return null;
-    }
+   try {
+       const response = await fetch('/api/token-address');
+       
+       if (!response.ok) {
+           console.error(`Error fetching token address: ${response.status}`);
+           return null;
+       }
+       
+       const data = await response.json();
+       return data.success && data.tokenAddress ? data.tokenAddress : null;
+   } catch (error) {
+       console.error("Error fetching token address:", error);
+       return null;
+   }
 }
 
 /**

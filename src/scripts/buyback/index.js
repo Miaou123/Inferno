@@ -17,11 +17,9 @@ require('dotenv').config();
 
 // Configuration from environment variables
 const config = {
-  // Use REWARDS_CLAIM_THRESHOLD or fall back to REWARD_THRESHOLD_SOL to ensure consistency
-  rewardThreshold: parseFloat(process.env.REWARDS_CLAIM_THRESHOLD) || 
-                   parseFloat(process.env.REWARD_THRESHOLD_SOL) || 0.1,
-  maxSlippage: parseFloat(process.env.MAX_SLIPPAGE_PERCENT) || 2,
-  buybackInterval: parseInt(process.env.BUYBACK_INTERVAL_MINUTES) || 15
+  rewardThreshold: parseFloat(process.env.REWARDS_CLAIM_THRESHOLD) || 0.3,
+  maxSlippage: parseFloat(process.env.MAX_SLIPPAGE_PERCENT) || 3,
+  buybackInterval: parseInt(process.env.BUYBACK_INTERVAL_MINUTES) || 30
 };
 
 /**

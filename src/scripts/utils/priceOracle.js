@@ -1,7 +1,7 @@
 /**
  * Price Oracle for $INFERNO token
  * 
- * Fetches and caches token price data with fallback mechanisms
+ * Fetches and caches token price data using DexScreener API
  */
 const axios = require('axios');
 const logger = require('./logger').price;
@@ -12,18 +12,22 @@ require('dotenv').config();
 // Cache duration in milliseconds (15 minutes)
 const CACHE_DURATION_MS = 15 * 60 * 1000;
 
+// Rate limiter for DexScreener API (max 300 requests per minute)
+const RATE_LIMIT_INTERVAL = 500; // Ensure at least 500ms between requests (~120 per minute to be safe)
+let lastRequestTimestamp = 0;
+
 // Store data in memory cache
 let priceCache = {
   lastUpdated: null,
   tokenPriceInSol: null,
   tokenPriceInUsd: null,
   solPriceInUsd: null,
-  source: 'birdeye',  // Only using Birdeye as source
+  source: 'dexscreener',
   marketCap: null
 };
 
 /**
- * Fetch token price from Birdeye API (no fallback)
+ * Fetch token price from DexScreener API
  * @returns {Promise<Object>} Price data
  */
 const fetchTokenPrice = async () => {
@@ -40,19 +44,41 @@ const fetchTokenPrice = async () => {
       return priceCache;
     }
     
-    logger.info('Fetching fresh token price data');
+    logger.info('Fetching fresh token price data from DexScreener');
     
-    // Use ONLY Birdeye API - no fallbacks, no mocks
-    const birdeyeData = await fetchFromBirdeye();
-    updateCache(birdeyeData, 'birdeye');
+    // Use DexScreener API
+    const dexScreenerData = await fetchFromDexScreener();
+    updateCache(dexScreenerData, 'dexscreener');
     
-    // Return real data from Birdeye only
-    return birdeyeData;
+    return dexScreenerData;
   } catch (error) {
     logger.error(`Error fetching token price: ${error.message}`);
     throw error;
   }
 };
+
+/**
+ * Rate-limited fetch function for DexScreener API
+ * @param {String} url - The API URL to fetch from
+ * @returns {Promise<Object>} The API response
+ */
+async function rateLimitedFetch(url) {
+  const now = Date.now();
+  const timeElapsed = now - lastRequestTimestamp;
+  
+  // If the time since the last request is less than our limit, wait for the difference
+  if (timeElapsed < RATE_LIMIT_INTERVAL) {
+    const waitTime = RATE_LIMIT_INTERVAL - timeElapsed;
+    logger.debug(`Rate limiting: waiting ${waitTime}ms before next request`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  // Update the last request timestamp
+  lastRequestTimestamp = Date.now();
+  
+  // Perform the fetch with axios
+  return axios.get(url);
+}
 
 /**
  * Update the price cache
@@ -83,66 +109,69 @@ const refreshPriceCache = async () => {
 };
 
 /**
- * Fetch price data from Birdeye API
+ * Fetch price data from DexScreener API
  * @returns {Promise<Object>} Price data
  */
-const fetchFromBirdeye = async () => {
+const fetchFromDexScreener = async () => {
   try {
-    const apiKey = process.env.BIRDEYE_API_KEY;
-    const apiUrl = process.env.BIRDEYE_API_URL || 'https://public-api.birdeye.so/defi/price';
     const tokenAddress = process.env.TOKEN_ADDRESS;
-    
-    if (!apiKey) {
-      throw new Error('BIRDEYE_API_KEY not set in environment');
-    }
     
     if (!tokenAddress) {
       throw new Error('TOKEN_ADDRESS not set in environment');
     }
     
     // Fetch token data
-    const tokenResponse = await axios.get(`${apiUrl}?address=${tokenAddress}`, {
-      headers: {
-        'X-API-KEY': apiKey
-      }
-    });
+    logger.info(`Fetching data for token: ${tokenAddress}`);
+    const tokenResponse = await rateLimitedFetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`);
     
-    if (tokenResponse.status !== 200 || !tokenResponse.data.success) {
-      throw new Error(`Birdeye API error: ${tokenResponse.data.error || 'Unknown error'}`);
+    if (!tokenResponse.data || !tokenResponse.data.pairs || tokenResponse.data.pairs.length === 0) {
+      throw new Error(`DexScreener API error: No pair data found for token ${tokenAddress}`);
     }
-    
-    const tokenData = tokenResponse.data.data;
     
     // Fetch SOL data for USD conversion
-    const solResponse = await axios.get(`${apiUrl}?address=So11111111111111111111111111111111111111112`, {
-      headers: {
-        'X-API-KEY': apiKey
-      }
-    });
+    logger.info('Fetching SOL price data');
+    const solResponse = await rateLimitedFetch('https://api.dexscreener.com/latest/dex/tokens/So11111111111111111111111111111111111111112');
     
-    if (solResponse.status !== 200 || !solResponse.data.success) {
-      throw new Error(`Birdeye API error for SOL: ${solResponse.data.error || 'Unknown error'}`);
+    if (!solResponse.data || !solResponse.data.pairs || solResponse.data.pairs.length === 0) {
+      throw new Error('DexScreener API error: No pair data found for SOL');
     }
     
-    const solData = solResponse.data.data;
+    // Extract token data from response
+    const tokenPair = tokenResponse.data.pairs[0];
+    const solPair = solResponse.data.pairs[0];
     
-    // Calculate derived values
-    const tokenPriceInSol = tokenData.value;
-    const solPriceInUsd = solData.value;
+    // Get prices
+    const tokenPriceInUsd = parseFloat(tokenPair.priceUsd || 0);
+    const solPriceInUsd = parseFloat(solPair.priceUsd || 0);
     
-    // Calculate market cap (SOL amount) then convert to USD
-    const fixedSupply = 1000000000; // 1 billion tokens
+    // Calculate token price in SOL
+    const tokenPriceInSol = solPriceInUsd > 0 ? tokenPriceInUsd / solPriceInUsd : 0;
+    
+    // Extract additional useful data for debugging and monitoring
+    const pairInfo = {
+      dexId: tokenPair.dexId,
+      pairAddress: tokenPair.pairAddress,
+      baseTokenSymbol: tokenPair.baseToken.symbol,
+      baseTokenName: tokenPair.baseToken.name,
+      liquidity: tokenPair.liquidity?.usd || 0,
+      volume24h: tokenPair.volume?.h24 || 0,
+      priceChange24h: tokenPair.priceChange?.h24 || 0
+    };
+    
+    // Calculate market cap
+    const fixedSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000; // 1 billion tokens
+    const marketCap = tokenPriceInUsd * fixedSupply;
     const marketCapInSol = tokenPriceInSol * fixedSupply;
-    const marketCap = marketCapInSol * solPriceInUsd;
     
-    // Calculate token price in USD
-    const tokenPriceInUsd = tokenPriceInSol * solPriceInUsd;
-    
-    // Log real data directly from Birdeye
-    logger.info(`REAL DATA from Birdeye:
+    // Log data from DexScreener
+    logger.info(`DexScreener data:
       - Token: ${tokenAddress}
-      - Price: ${tokenPriceInSol}
-      - Market Cap: ${marketCapInSol} SOL
+      - Symbol: ${pairInfo.baseTokenSymbol}
+      - Price USD: ${tokenPriceInUsd}
+      - Price SOL: ${tokenPriceInSol}
+      - Market Cap: $${marketCap.toFixed(2)}
+      - Liquidity: $${pairInfo.liquidity}
+      - 24h Change: ${pairInfo.priceChange24h}%
     `);
     
     return {
@@ -150,44 +179,39 @@ const fetchFromBirdeye = async () => {
       tokenPriceInUsd,
       solPriceInUsd,
       marketCap,
-      marketCapInSol
+      marketCapInSol,
+      pairInfo  // Include additional pair info
     };
   } catch (error) {
-    logger.error(`Error fetching from Birdeye: ${error.message}`);
+    logger.error(`Error fetching from DexScreener: ${error.message}`);
     throw error;
   }
 };
 
-// No fallback sources - we only use real Birdeye data
-
 /**
- * Save price data to history
- * @param {Object} priceData - Price data
- * @param {String} source - Data source
- */
-const savePriceHistory = (priceData, source) => {
-  // Skip saving price history as requested by user
-  logger.debug(`Current price: ${priceData.tokenPriceInUsd} USD (${priceData.tokenPriceInSol} SOL) from ${source}`);
-  return;
-};
-
-/**Get current token market cap - Birdeye price × supply
+ * Get current token market cap - DexScreener price × supply
  * @returns {Promise<Number>} Market cap in USD
  */
 const getMarketCap = async () => {
   try {
-    // Get price data from Birdeye API
+    // Get price data from DexScreener API
     const priceData = await fetchTokenPrice();
     
-    // Calculate market cap using total supply
-    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-    const marketCap = priceData.tokenPriceInSol * initialSupply;
+    if (!priceData || !priceData.marketCap) {
+      // Calculate market cap using total supply if not available in price data
+      const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
+      const marketCap = priceData.tokenPriceInUsd * initialSupply;
+      
+      logger.info(`Calculated market cap: $${marketCap.toFixed(2)} (price: $${priceData.tokenPriceInUsd} × supply: ${initialSupply})`);
+      return marketCap;
+    }
     
-    logger.info(`Calculated market cap: $${marketCap.toFixed(2)} (price: $${priceData.tokenPriceInSol} × supply: ${initialSupply})`);
-    return marketCap;
+    logger.info(`Retrieved market cap: $${priceData.marketCap.toFixed(2)}`);
+    return priceData.marketCap;
   } catch (error) {
     logger.error(`Error calculating market cap: ${error.message}`);
-    throw error;
+    // Return fallback value if there's an error to prevent the monitoring system from breaking
+    return 0;
   }
 };
 
@@ -197,33 +221,31 @@ const getMarketCap = async () => {
  * @returns {Number} Circulating supply
  */
 const getCirculatingSupply = () => {
-  // We now track burns separately in burnTracker
-  // This is just returning the initial supply as it's only used for market cap calculation
+  // We track burns separately in burnTracker
+  // This just returns the initial supply as it's only used for market cap calculation
   const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
   return initialSupply;
 };
 
 /**
- * Get simple price metrics - ONLY price data, nothing else
+ * Get simple price metrics - price data and market stats
  * @returns {Promise<Object>} Price metrics
  */
 const getTokenMetrics = async () => {
   try {
-    // Get fresh price data from Birdeye
+    // Get fresh price data from DexScreener
     const priceData = await fetchTokenPrice();
     
-    // Calculate market cap from fixed supply
-    const initialSupply = Number(process.env.INITIAL_SUPPLY) || 1000000000;
-    const marketCap = priceData.tokenPriceInUsd * initialSupply;
-    
-    // Create simple price metrics response
+    // Prepare metrics response
     const priceMetrics = {
       priceInSol: priceData.tokenPriceInSol,
       priceInUsd: priceData.tokenPriceInUsd,
       solPriceInUsd: priceData.solPriceInUsd,
-      marketCap: marketCap,
+      marketCap: priceData.marketCap,
       timestamp: new Date().toISOString(),
-      priceSource: priceData.source
+      priceSource: priceData.source,
+      pairInfo: priceData.pairInfo || {}, // Include additional pair info if available
+      lastUpdated: new Date(priceData.lastUpdated).toISOString()
     };
     
     return priceMetrics;
@@ -233,11 +255,58 @@ const getTokenMetrics = async () => {
   }
 };
 
+/**
+ * Get multiple token prices (uses DexScreener batch API)
+ * @param {Array} tokenAddresses - Array of token addresses (max 10)
+ * @returns {Promise<Object>} Object mapping token addresses to prices
+ */
+const getMultipleTokenPrices = async (tokenAddresses) => {
+  try {
+    if (!Array.isArray(tokenAddresses) || tokenAddresses.length === 0) {
+      throw new Error('Invalid input: tokenAddresses must be a non-empty array');
+    }
+    
+    if (tokenAddresses.length > 10) {
+      logger.warn('DexScreener API supports max 10 tokens in batch request, truncating list');
+      tokenAddresses = tokenAddresses.slice(0, 10);
+    }
+    
+    logger.info(`Fetching prices for ${tokenAddresses.length} tokens`);
+    
+    // Use DexScreener batch API to get multiple token prices
+    const response = await rateLimitedFetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddresses.join(',')}`);
+    
+    if (!response.data || !response.data.pairs) {
+      logger.warn('No pair data returned from DexScreener batch API');
+      return {};
+    }
+    
+    // Extract token prices from response
+    const prices = {};
+    response.data.pairs.forEach(pair => {
+      if (pair.baseToken && pair.baseToken.address) {
+        prices[pair.baseToken.address] = {
+          priceUsd: parseFloat(pair.priceUsd || 0),
+          symbol: pair.baseToken.symbol,
+          liquidity: pair.liquidity?.usd || 0,
+          volume24h: pair.volume?.h24 || 0
+        };
+      }
+    });
+    
+    logger.info(`Retrieved prices for ${Object.keys(prices).length} tokens`);
+    return prices;
+  } catch (error) {
+    logger.error(`Error fetching multiple token prices: ${error.message}`);
+    return {};
+  }
+};
+
 module.exports = {
   fetchTokenPrice,
   refreshPriceCache,
   getMarketCap,
   getCirculatingSupply,
-  getTokenMetrics
-  // updateMetricsFromChain has been removed as we're now using burnTracker
+  getTokenMetrics,
+  getMultipleTokenPrices
 };
