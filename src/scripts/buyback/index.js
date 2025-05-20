@@ -6,6 +6,7 @@
 const cron = require('node-cron');
 const logger = require('../utils/logger').buyback;
 const fileStorage = require('../utils/fileStorage');
+const { createKeypair } = require('../utils/solana');
 
 // Import modular components
 const { checkAvailableRewards } = require('./checkRewards');
@@ -69,7 +70,14 @@ const performBuybackAndBurn = async () => {
     logger.info(`Successfully bought ${buybackResult.tokenAmount} tokens with ${buybackResult.solAmount} SOL`);
     
     // Burn tokens
-    const burnResult = await burnBuybackTokens(buybackResult.tokenAmount, claimResult.rewardId);
+    const burnResult = await burnBuybackTokens(
+      createKeypair(),             // Add this keypair parameter
+      buybackResult.tokenAmount,   // Keep this parameter
+      process.env.TOKEN_ADDRESS,   // Add the token address 
+      claimResult.rewardId,        // Keep this parameter
+      buybackResult.solAmount,     // Add SOL amount (optional)
+      claimResult.amountUsd        // Add USD amount (optional)
+    );
     
     if (!burnResult.success) {
       logger.error(`Failed to burn tokens: ${burnResult.error}`);

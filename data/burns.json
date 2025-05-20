@@ -81,5 +81,41 @@
       "decimals": 6,
       "rawAmount": 10000000
     }
+  },
+  {
+    "id": "1747753616115-akr2qzm",
+    "timestamp": "2025-05-20T15:06:56.115Z",
+    "burnType": "buyback",
+    "burnAmount": 100,
+    "txSignature": "3vwWZRYW5mVu68ezZY97iG3iw1scancBHekpHv34DYMkGmax3SkbBidvzkywxynNBu6E6tVwz2Cxk11hPgR2X5m4",
+    "initiator": "buyback-script",
+    "solSpent": 0,
+    "solSpentUsd": 0,
+    "rewardId": "test",
+    "details": {
+      "blockTime": "2025-05-20T15:06:54.000Z",
+      "fee": 5000,
+      "slot": 341294568,
+      "decimals": 6,
+      "rawAmount": 100000000
+    }
+  },
+  {
+    "id": "1747754071578-gkdlaou",
+    "timestamp": "2025-05-20T15:14:31.578Z",
+    "burnType": "buyback",
+    "burnAmount": 4387367.330376,
+    "txSignature": "z7DQapNT8WUKyuMfQeterNvNDfNtF72kHcjMmqE3hL4Fhsf4hageX1XwQfqCmmRXn95xgqSi8kfpbv9aTEz1RTQ",
+    "initiator": "buyback-script",
+    "solSpent": 0.00093113965,
+    "solSpentUsd": 0.16291023287,
+    "rewardId": "1747754066643-98e0g6r",
+    "details": {
+      "blockTime": "2025-05-20T15:14:30.000Z",
+      "fee": 5000,
+      "slot": 341295719,
+      "decimals": 6,
+      "rawAmount": 4387367330376
+    }
   }
 ]
