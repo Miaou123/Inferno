@@ -54,17 +54,12 @@ const burnBuybackTokens = async (
     // Apply a 1% safety buffer to the quoted amount
     // This helps avoid "insufficient funds" errors if the actual received amount is slightly less
     const safeAmount = Math.floor(amount * 0.99); // 1% safety buffer
-    logger.info(`Applying 1% safety buffer: ${amount} → ${safeAmount} tokens`);
-    
-    // Check wallet balance before proceeding
-    logger.info(`Checking wallet balance for buyback burn`);
     
     // Get the mint info to determine decimals
     let tokenDecimals = TOKEN_DECIMALS;
     try {
       const mintInfo = await getMint(connection, tokenMint);
       tokenDecimals = mintInfo.decimals;
-      logger.info(`Detected token decimals: ${tokenDecimals}`);
     } catch (error) {
       logger.warn(`Could not detect token decimals, using default: ${TOKEN_DECIMALS}. Error: ${error.message}`);
     }
@@ -78,8 +73,7 @@ const burnBuybackTokens = async (
         tokenMint,
         senderKeypair.publicKey
       );
-      
-      logger.info(`Found token account: ${userTokenAccount.address.toString()}`);
+
     } catch (error) {
       logger.error(`Error getting token account: ${error.message}`);
       return {
@@ -102,15 +96,11 @@ const burnBuybackTokens = async (
       };
     }
     
-    logger.info(`Sufficient tokens available in buyback wallet. Required: ${safeAmount.toLocaleString()}, Available: ${userTokenAccount.amount}`);
-    
     // Convert amount to raw amount with decimals
     const rawAmount = safeAmount * Math.pow(10, tokenDecimals);
-    logger.info(`Converting ${safeAmount.toLocaleString()} tokens to ${rawAmount.toLocaleString()} raw units (${tokenDecimals} decimals)`);
     
     try {
       // Execute the burn transaction using the SPL Token burn function
-      logger.info(`Burning ${safeAmount.toLocaleString()} tokens from account ${userTokenAccount.address.toString()}`);
       
       const signature = await burn(
         connection,
@@ -130,7 +120,6 @@ const burnBuybackTokens = async (
           commitment: 'confirmed',
           maxSupportedTransactionVersion: 0
         });
-        logger.info('Retrieved transaction details');
       } catch (txError) {
         logger.warn(`Could not retrieve transaction details: ${txError.message}`);
         // Continue even if we can't get details

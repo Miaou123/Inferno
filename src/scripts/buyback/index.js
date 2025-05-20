@@ -28,7 +28,6 @@ const config = {
  */
 const performBuybackAndBurn = async () => {
   try {
-    logger.info('Starting buyback and burn process');
     
     // Initialize storage
     fileStorage.initializeStorage();
@@ -41,14 +40,6 @@ const performBuybackAndBurn = async () => {
       return;
     }
     
-    logger.info(`Available rewards: ${rewardsInfo.availableAmount} SOL`);
-    
-    // Check if rewards are above threshold
-    if (rewardsInfo.availableAmount < config.rewardThreshold) {
-      logger.info(`Available rewards (${rewardsInfo.availableAmount} SOL) below threshold (${config.rewardThreshold} SOL)`);
-      return;
-    }
-    
     // Claim rewards
     const claimResult = await claimRewards();
     
@@ -57,8 +48,6 @@ const performBuybackAndBurn = async () => {
       return;
     }
     
-    logger.info(`Successfully claimed ${claimResult.amount} SOL ($${claimResult.amountUsd.toFixed(2)}) in rewards`);
-    
     // Execute buyback
     const buybackResult = await executeBuyback(claimResult.amount, claimResult.rewardId);
     
@@ -66,8 +55,6 @@ const performBuybackAndBurn = async () => {
       logger.error(`Failed to execute buyback, aborting process: ${buybackResult.error}`);
       return;
     }
-    
-    logger.info(`Successfully bought ${buybackResult.tokenAmount} tokens with ${buybackResult.solAmount} SOL`);
     
     // Burn tokens
     const burnResult = await burnBuybackTokens(
@@ -84,8 +71,6 @@ const performBuybackAndBurn = async () => {
       return;
     }
     
-    logger.info(`Successfully burned ${burnResult.amount} tokens (tx: ${burnResult.txSignature})`);
-    logger.info('Buyback and burn process completed successfully');
   } catch (error) {
     logger.error('Error in buyback and burn process:', error);
   }
@@ -98,11 +83,6 @@ const startBuybackMonitoring = async () => {
   try {
     // Initialize storage
     fileStorage.initializeStorage();
-    
-    logger.info('Buyback and burn monitoring starting');
-    logger.info(`Reward threshold: ${config.rewardThreshold} SOL`);
-    logger.info(`Max slippage: ${config.maxSlippage}%`);
-    logger.info(`Check interval: ${config.buybackInterval} minutes`);
     
     // Run initial buyback
     await performBuybackAndBurn();

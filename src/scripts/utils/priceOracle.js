@@ -127,7 +127,6 @@ const fetchFromDexScreener = async (forceRefresh = false) => {
     
     // Emit event with the new price data so other components can react
     priceEvents.emit('priceUpdate', priceData);
-    logger.info(`Price updated: $${priceData.tokenPriceInUsd.toFixed(8)} USD, MC: $${priceData.marketCap.toFixed(2)}`);
     
     return priceData;
   } catch (error) {
@@ -266,8 +265,6 @@ const refreshPriceCache = async () => {
 
 // Run an initial price fetch to have data right away
 fetchFromDexScreener()
-  .then(data => logger.info(`Initial price fetch completed: $${data.tokenPriceInUsd.toFixed(8)} USD`))
-  .catch(error => logger.error(`Initial price fetch failed: ${error.message}`));
 
 module.exports = {
   fetchFromDexScreener,

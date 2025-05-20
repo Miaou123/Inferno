@@ -46,5 +46,89 @@
     "type": "buyback",
     "rewardId": "1747765568562-uqshsya",
     "duration": 0.97
+  },
+  {
+    "id": "1747767121367-l8xwnwa",
+    "timestamp": "2025-05-20T18:52:01.367Z",
+    "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
+    "solAmount": 0.00036527879999999997,
+    "tokenAmount": 11949.447675,
+    "txSignature": "eGG4zP4mDmvxXg8T6v5dnfGMgXoPqsUgBjPHKLYzGK3ukyv8vFZKfnyDxcUCx8hk694SR1pogqQPnzg27MHSx52",
+    "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
+    "type": "buyback",
+    "rewardId": "1747767114870-yna9gcq",
+    "duration": 4.95
+  },
+  {
+    "id": "1747767241424-3d979zy",
+    "timestamp": "2025-05-20T18:54:01.424Z",
+    "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
+    "solAmount": 0.0002934512,
+    "tokenAmount": 9374.349409,
+    "txSignature": "4w9iZshfieshaMvwm8RBKvF4fsitRZCcNEviYi6gZBc6Vjv5ESEjHKoFHcGceVe8cFG7447fX76eSTMAQWYcpyRN",
+    "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
+    "type": "buyback",
+    "rewardId": "1747767238742-yagaos9",
+    "duration": 1.26
+  },
+  {
+    "id": "1747767350160-glyrsna",
+    "timestamp": "2025-05-20T18:55:50.159Z",
+    "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
+    "solAmount": 0.00088898625,
+    "tokenAmount": 30454.461077,
+    "txSignature": "3FBXoD9koRhNRb1cBotCds21gakMWZBithYXCyVKQjw7hqegCCvqLwdoBV6HYB9XME1HddkKbjoPTXkRtpDh2wgq",
+    "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
+    "type": "buyback",
+    "rewardId": "1747767347501-zab36tt",
+    "duration": 1.13
+  },
+  {
+    "id": "1747767592551-sk2jjud",
+    "timestamp": "2025-05-20T18:59:52.551Z",
+    "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
+    "solAmount": 0.00036383669999999994,
+    "tokenAmount": 12441.585004,
+    "txSignature": "47JPfgkMbvWth3idXRvJT6UCUJmLJggEKvsUE7JFmfuo3VQsAvCQz8zGb137h2XH47GXnmS9XMjs2EayPAV4ESVm",
+    "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
+    "type": "buyback",
+    "rewardId": "1747767590170-u0virup",
+    "duration": 1
+  },
+  {
+    "id": "1747767881608-b2f4d97",
+    "timestamp": "2025-05-20T19:04:41.608Z",
+    "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
+    "solAmount": 0.00037624465,
+    "tokenAmount": 12865.588172,
+    "txSignature": "3rkdhTYHWBHeC9e1XQfJzZQergTsfrKyT74j59Req32csTafY4bszZD6jkpvZomYDcsZsYtFcn28J1V8buvd6Aox",
+    "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
+    "type": "buyback",
+    "rewardId": "1747767875560-njqeguq",
+    "duration": 4.57
+  },
+  {
+    "id": "1747768409321-uurntua",
+    "timestamp": "2025-05-20T19:13:29.321Z",
+    "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
+    "solAmount": 0.00037642229999999995,
+    "tokenAmount": 12871.364248,
+    "txSignature": "SbQH42oaghzuZKJvbck3hdZGwat21yJD6w9ULaUUoqQaxUx3kSumNfDfjSxmCrmTbLWrXm7KRVegvVtTTgqUgGC",
+    "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
+    "type": "buyback",
+    "rewardId": "1747768407263-auslyi7",
+    "duration": 0.66
+  },
+  {
+    "id": "1747768505474-doffawr",
+    "timestamp": "2025-05-20T19:15:05.474Z",
+    "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
+    "solAmount": 0.0003529079,
+    "tokenAmount": 12106.244131,
+    "txSignature": "7xwPPh3cbiq61VJCb3VvuUWhsNZ6jiZ5mNyjZNKJoFJ6TWWiPBZU6Z8U49WDgz2qEgu6e8qbrpt4XrXBStQtmFY",
+    "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
+    "type": "buyback",
+    "rewardId": "1747768503249-e1i3ge7",
+    "duration": 0.86
   }
 ]
