@@ -195,10 +195,6 @@ const checkAvailableRewards = async () => {
       log.includes('No coin creator fee to collect')
     );
     
-    // Log the findings for debugging
-    logger.info(`Transfer log found: ${transferLogFound}, Actual transfer found: ${transferFound}, Available amount: ${availableAmount}`);
-    logger.info(`No rewards message: ${noRewardsMessage}`);
-    
     if (noRewardsMessage) {
       logger.info('No rewards available to collect');
       return {

@@ -9,6 +9,8 @@ const { getReserveWalletKeypair, getTokenBalance } = require('../utils/solana');
 const logger = require('../utils/logger').milestone;
 const fileStorage = require('../utils/fileStorage');
 const { Connection, PublicKey } = require('@solana/web3.js');
+const fs = require('fs');
+const path = require('path');
 const { burn, getOrCreateAssociatedTokenAccount, getMint } = require('@solana/spl-token');
 require('dotenv').config();
 
@@ -380,12 +382,28 @@ const startMilestoneMonitoring = async () => {
     // Run initial check
     await checkMilestones();
 
-    // Instead of a cron job, listen for price updates
-    priceEvents.on('priceUpdate', async (priceData) => {
-      logger.info(`Price update triggered milestone check. Market cap: $${priceData.marketCap.toLocaleString()}`);
-      // Pass the market cap from the event to avoid an extra API call
-      await checkMilestones(priceData.marketCap);
-    });    
+  // Vérifier périodiquement le fichier de prix (toutes les 10 secondes)
+  setInterval(async () => {
+    try {
+      const priceFile = path.join(__dirname, '../../../data/latest-price.json');
+      if (!fs.existsSync(priceFile)) return;
+      
+      const stats = fs.statSync(priceFile);
+      const lastModified = new Date(stats.mtime);
+      const now = new Date();
+      
+      // Si le fichier a été modifié dans les 30 dernières secondes
+      if ((now - lastModified) < 30000) {
+        const priceDataText = fs.readFileSync(priceFile, 'utf8');
+        const priceData = JSON.parse(priceDataText);
+        
+        logger.info(`Price update detected via file with market cap: $${priceData.marketCap.toLocaleString()}`);
+        await checkMilestones(priceData.marketCap);
+      }
+    } catch (error) {
+      logger.error(`Error reading price file: ${error.message}`);
+    }
+  }, 10000);
 
     // Optional: Keep a fallback check every hour
     cron.schedule('0 * * * *', async () => {

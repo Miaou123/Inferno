@@ -30,5 +30,21 @@
     "updatedAt": "2025-05-20T17:15:46.550Z",
     "tokensBurned": 20504.553899,
     "burnTxSignature": "3n5BsV6XBTMRhyPByaAcMLzD8ZViDhgarmPN3VKFMNi7fga4Wm8ZMxr4h6mK4VXa3KvGuagQg17JHGXrbu7LAQeK"
+  },
+  {
+    "id": "1747762813671-h3zgq0x",
+    "timestamp": "2025-05-20T17:40:13.671Z",
+    "rewardAmount": 0.00148515,
+    "rewardAmountUsd": 0.24831707999999997,
+    "isProcessed": false,
+    "claimTxSignature": "2DjMLM6yKYb4uroFQW26phLakfGH7iivdzbEjcAxUq9qDbhN7Gn1jsv32aC77sp2gFdA2Wm4ZAJAU969wn7fK1DR",
+    "tokensBought": 48003.565918,
+    "buyTxSignature": "5CViRdTrGSiwHG1KPQKMPjBqD4YoqjsuGgXgy9QJLc9gd8HBepeJsnrF9HBhdU7Kee79izSN9Puj3zRdxrn1FkgP",
+    "solAmountUsed": 0.0014108925,
+    "solAmountReserved": 0.00007425750000000005,
+    "status": "burned",
+    "updatedAt": "2025-05-20T17:40:21.065Z",
+    "tokensBurned": 48003.565918,
+    "burnTxSignature": "4ag6XNvugsq4ogfs7yukydGxLhgHQNf7jk6GnCTMao4hLW8aQym8upJQ4WWBz2PQYm1uqThoj3VprJsVTFzN1Dyx"
   }
 ]

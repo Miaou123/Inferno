@@ -21,5 +21,49 @@
     "buybackBurned": 0,
     "milestoneBurned": 10,
     "marketCap": 0
+  },
+  {
+    "id": "1747763854734-19zmpi1",
+    "timestamp": "2025-05-20T17:57:34.734Z",
+    "totalSupply": 999999980,
+    "circulatingSupply": 983404155.817524,
+    "reserveWalletBalance": 16595824.182476,
+    "totalBurned": 20,
+    "buybackBurned": 0,
+    "milestoneBurned": 20,
+    "marketCap": 0
+  },
+  {
+    "id": "1747764011899-f36n1i5",
+    "timestamp": "2025-05-20T18:00:11.899Z",
+    "totalSupply": 999999970,
+    "circulatingSupply": 983404155.817524,
+    "reserveWalletBalance": 16595814.182476,
+    "totalBurned": 30,
+    "buybackBurned": 0,
+    "milestoneBurned": 30,
+    "marketCap": 0
+  },
+  {
+    "id": "1747764414072-1x9dwvl",
+    "timestamp": "2025-05-20T18:06:54.072Z",
+    "totalSupply": 999999960,
+    "circulatingSupply": 983404155.817524,
+    "reserveWalletBalance": 16595804.182476,
+    "totalBurned": 40,
+    "buybackBurned": 0,
+    "milestoneBurned": 40,
+    "marketCap": 0
+  },
+  {
+    "id": "1747764434170-600c52x",
+    "timestamp": "2025-05-20T18:07:14.170Z",
+    "totalSupply": 999999950,
+    "circulatingSupply": 983404155.817524,
+    "reserveWalletBalance": 16595794.182476,
+    "totalBurned": 50,
+    "buybackBurned": 0,
+    "milestoneBurned": 50,
+    "marketCap": 0
   }
 ]

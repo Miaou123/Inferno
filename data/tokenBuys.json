@@ -22,5 +22,17 @@
     "type": "buyback",
     "rewardId": "1747761336088-aouns5x",
     "duration": 3.15
+  },
+  {
+    "id": "1747762815797-lmobb2j",
+    "timestamp": "2025-05-20T17:40:15.797Z",
+    "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
+    "solAmount": 0.0014108925,
+    "tokenAmount": 48003.565918,
+    "txSignature": "5CViRdTrGSiwHG1KPQKMPjBqD4YoqjsuGgXgy9QJLc9gd8HBepeJsnrF9HBhdU7Kee79izSN9Puj3zRdxrn1FkgP",
+    "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
+    "type": "buyback",
+    "rewardId": "1747762813671-h3zgq0x",
+    "duration": 0.63
   }
 ]
