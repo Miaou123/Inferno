@@ -1,26 +1,26 @@
 [
   {
-    "id": "1747755609325-o3o1pyf",
-    "timestamp": "2025-05-20T15:40:09.325Z",
+    "id": "1747761062105-cahlh2m",
+    "timestamp": "2025-05-20T17:11:02.104Z",
     "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
     "solAmount": 0.000095,
-    "tokenAmount": 3336.256592,
-    "txSignature": "CFTTWSmT6tSWUa32n3kELMfVMT8gZwBNXi3dEiPGdJJjrsvtY16iuixjkrQ3RMgNoBRqmMYfnMk5KjF5ZAGdLAZ",
+    "tokenAmount": 3232.519372,
+    "txSignature": "541ZWyWeGUbjNKYnyksFKTLCrRwD7kBjwpcMbcRChSWfk5DSbzSbtGhSFPjzMB6uUmE28s5MArFFvsNexteJaa92",
     "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
     "type": "buyback",
-    "rewardId": "1747755606225-4mye70c",
-    "duration": 1.65
+    "rewardId": "1747761058870-h7a4u69",
+    "duration": 1.77
   },
   {
-    "id": "1747755906316-ypf0qvx",
-    "timestamp": "2025-05-20T15:45:06.316Z",
+    "id": "1747761340708-8ln652z",
+    "timestamp": "2025-05-20T17:15:40.708Z",
     "tokenAddress": "9a52s3y9YaGzm7u7nb5D7L5tB5BoQcwW9iDgoyyZpump",
-    "solAmount": 0.0008841859,
-    "tokenAmount": 27541.596519,
-    "txSignature": "66pLcfQunca6BAyZ8UH8BurFA7GNJcUWkJnMREiXQFuJYYinLnmiks9bHSX6YrCjLM95RQ6nMVNnL3n62Wp5us7e",
+    "solAmount": 0.0006584430999999999,
+    "tokenAmount": 20504.553899,
+    "txSignature": "5Jin3DsrzFL3KihTqKfLLQbZvBM2zQnEqyqq6K7HQrkc6t5zjkfcq1MaGzxQg73VXNKxqFA1xQXZTEc5eKaNrDb7",
     "wallet": "BUqPMnszEuLA1zesLJjsV2fs4piKFi4xuzL41xzWHaeM",
     "type": "buyback",
-    "rewardId": "1747755903804-ok28yf2",
-    "duration": 1.1
+    "rewardId": "1747761336088-aouns5x",
+    "duration": 3.15
   }
 ]

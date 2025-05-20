@@ -15,6 +15,7 @@
     "test-rewards": "node src/scripts/test-rewards.js",
     "decode-tx": "node src/scripts/token/decodeTx.js",
     "init": "node initialize.js",
+    "start-price": "node src/priceService.js",
     "start": "concurrently \"npm run buyback\" \"npm run milestone\" \"npm run start-api\"",
     "test": "jest"
   },

@@ -14,7 +14,7 @@ const {
   const logger = require('../utils/logger').buyback;
   const fileStorage = require('../utils/fileStorage');
   const { createKeypair, getConnection } = require('../utils/solana');
-  const { fetchTokenPrice } = require('../utils/priceOracle');
+  const { fetchFromDexScreener } = require('../utils/priceOracle');
   const { checkAvailableRewards, getCoinAccounts } = require('./checkRewards');
   require('dotenv').config();
   
@@ -188,10 +188,10 @@ const {
       // Get USD value
       let claimAmountUsd = 0;
       try {
-        const priceData = await fetchTokenPrice();
+        const priceData = await fetchFromDexScreener();
         claimAmountUsd = claimAmount * priceData.solPriceInUsd;
       } catch (priceError) {
-        logger.warn(`Error getting SOL price: ${priceError.message}. Using default value.`);
+        logger.warn(`Error getting token price: ${priceError.message}. Using default value.`);
         claimAmountUsd = claimAmount * 400; // Fallback USD price for SOL
       }
       
