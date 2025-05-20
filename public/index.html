@@ -170,7 +170,7 @@
         /* Hero section */
         .hero {
             text-align: center;
-            padding: 80px 0;
+            padding: 60px 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -191,6 +191,9 @@
         .logo-container {
             position: relative;
             margin-bottom: 40px;
+            padding-bottom: 30px;
+            /* Remove any background that might be causing the dark circle */
+            background: transparent;
         }
         
         .logo {
@@ -198,35 +201,91 @@
             height: 180px;
             position: relative;
         }
-        
-        .logo-glow {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(
-                circle,
-                rgba(255, 69, 0, 0.4) 0%,
-                rgba(255, 140, 0, 0.2) 50%,
-                transparent 70%
-            );
-            border-radius: 50%;
-            z-index: -1;
-            animation: pulse 3s infinite alternate;
-        }
-        
-        @keyframes pulse {
-            0% {
-                transform: translate(-50%, -50%) scale(0.9);
-                opacity: 0.5;
-            }
-            100% {
-                transform: translate(-50%, -50%) scale(1.1);
-                opacity: 0.8;
-            }
-        }
+
+      /* Header small logo - increase from 30px to 40px */
+.logo-small img.logo-glow-effect {
+    width: 40px;  /* Increased from 30px */
+    height: 40px; /* Increased from 30px */
+    filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.7)); /* Stronger glow */
+    transition: filter 0.3s ease;
+}
+
+.logo-small img.logo-glow-effect:hover {
+    filter: drop-shadow(0 0 12px rgba(255, 69, 0, 0.9)); /* Stronger hover glow */
+    transform: scale(1.1); /* Slight grow on hover */
+}
+
+/* Hero section logo - increase from 180px to 250px */
+.logo-container img.logo {
+    width: 250px;  /* Increased from 180px */
+    height: 250px; /* Increased from 180px */
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 0 15px rgba(255, 69, 0, 0.6)); /* Larger drop shadow */
+}
+
+/* Increase glow size from 200px to 300px */
+.logo-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;  /* Increased from 200px */
+    height: 300px; /* Increased from 200px */
+    background: radial-gradient(
+        circle,
+        rgba(255, 69, 0, 0.5) 0%,  /* More opaque */
+        rgba(255, 140, 0, 0.3) 50%, /* More opaque */
+        transparent 70%
+    );
+    border-radius: 50%;
+    z-index: 1;
+    animation: pulse 3s infinite alternate;
+    /* Add a more intense glow */
+    box-shadow: 0 0 30px rgba(255, 69, 0, 0.3);
+}
+
+/* Make the pulse animation more dramatic */
+@keyframes pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(0.85);
+        opacity: 0.5;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.15);
+        opacity: 0.9; /* Higher opacity for more visible effect */
+    }
+}
+
+/* Responsiveness adjustments for the larger sizes */
+@media (max-width: 768px) {
+    .logo-container img.logo {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .logo-glow {
+        width: 250px;
+        height: 250px;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-container img.logo {
+        width: 160px;
+        height: 160px;
+    }
+    
+    .logo-glow {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .logo-small img.logo-glow-effect {
+        width: 32px;
+        height: 32px;
+    }
+}
 
         .market-cap-showcase {
     display: flex;
@@ -464,7 +523,7 @@
         
         /* Contract Display in Hero Section */
         .contract-display {
-            margin-top: 40px;
+            margin-bottom: 40px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1718,34 +1777,7 @@
         <!-- Header -->
         <header>
             <div class="logo-small">
-                <svg width="30" height="30" viewBox="0 0 100 100">
-                    <defs>
-                        <linearGradient id="headerFlameGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-                            <stop offset="0%" style="stop-color:#FF4500" />
-                            <stop offset="50%" style="stop-color:#FF8C00" />
-                            <stop offset="100%" style="stop-color:#FFCC00" />
-                        </linearGradient>
-                        <filter id="headerGlow" x="-30%" y="-30%" width="160%" height="160%">
-                            <feGaussianBlur stdDeviation="2" result="blur" />
-                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                        </filter>
-                    </defs>
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="url(#headerFlameGradient)" stroke-width="2" />
-                    <path d="M50 20 L70 40 L60 70 L40 70 L30 40 Z" fill="url(#headerFlameGradient)" filter="url(#headerGlow)" />
-                    <path d="M50 25 C60 32, 65 40, 60 55 C55 70, 45 70, 40 55 C35 40, 40 32, 50 25" 
-                          fill="url(#headerFlameGradient)" opacity="0.7">
-                        <animate attributeName="d" 
-                               values="M50 25 C60 32, 65 40, 60 55 C55 70, 45 70, 40 55 C35 40, 40 32, 50 25;
-                                      M50 25 C62 34, 67 42, 60 57 C53 72, 47 72, 40 57 C33 42, 38 34, 50 25;
-                                      M50 25 C60 32, 65 40, 60 55 C55 70, 45 70, 40 55 C35 40, 40 32, 50 25" 
-                               dur="3s" 
-                               repeatCount="indefinite" />
-                    </path>
-                    <circle cx="50" cy="50" r="6" fill="#FFCC00" filter="url(#headerGlow)">
-                        <animate attributeName="r" values="6;7;6" dur="2s" repeatCount="indefinite" />
-                    </circle>
-                </svg>
-                <span>$INFERNO</span>
+                <img src="/images/logo.png" width="30" height="30" alt="INFERNO Logo" class="logo-glow-effect">
             </div>
             <div class="nav-menu">
                 <a href="#metrics" class="nav-item">Metrics</a>
@@ -1759,68 +1791,14 @@
             </button>
         </header>
         
+        <!-- STEP 2: Replace the hero section logo with this code -->
         <!-- Hero section -->
         <section class="hero">
             <div class="hero-background"></div>
             <div class="logo-container">
                 <div class="logo-glow"></div>
-                <svg class="logo" viewBox="0 0 200 200">
-                    <defs>
-                        <linearGradient id="flameGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-                            <stop offset="0%" style="stop-color:#FF4500" />
-                            <stop offset="50%" style="stop-color:#FF8C00" />
-                            <stop offset="100%" style="stop-color:#FFCC00" />
-                        </linearGradient>
-                        <linearGradient id="flameGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#FF4500" />
-                            <stop offset="70%" style="stop-color:#FF8C00" />
-                            <stop offset="100%" style="stop-color:#FFCC00" />
-                        </linearGradient>
-                        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="5" result="blur" />
-                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                        </filter>
-                        <filter id="fireFilter" x="-50%" y="-50%" width="200%" height="200%">
-                            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="noise" />
-                            <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
-                            <feGaussianBlur stdDeviation="2" result="blur" />
-                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                        </filter>
-                    </defs>
-                    <circle cx="100" cy="100" r="90" fill="none" stroke="url(#flameGradient)" stroke-width="3" />
-                    
-                    <!-- Base flame -->
-                    <path d="M100 40 L140 80 L120 140 L80 140 L60 80 Z" fill="url(#flameGradient)" filter="url(#glow)" />
-                    
-                    <!-- Outer flame layers -->
-                    <path d="M100 35 C120 45, 130 70, 120 100 C110 140, 90 140, 80 100 C70 70, 80 45, 100 35" 
-                          fill="url(#flameGradient2)" opacity="0.7" filter="url(#fireFilter)">
-                        <animate attributeName="d" 
-                                 values="M100 35 C120 45, 130 70, 120 100 C110 140, 90 140, 80 100 C70 70, 80 45, 100 35;
-                                        M100 35 C125 50, 135 75, 120 105 C105 145, 95 145, 80 105 C65 75, 75 50, 100 35;
-                                        M100 35 C120 45, 130 70, 120 100 C110 140, 90 140, 80 100 C70 70, 80 45, 100 35" 
-                                 dur="3s" 
-                                 repeatCount="indefinite" />
-                    </path>
-                    
-                    <!-- Inner flame details -->
-                    <path d="M100 50 L115 80 L105 125 L95 125 L85 80 Z" fill="#FFCC00" opacity="0.9" filter="url(#glow)">
-                        <animate attributeName="d" 
-                                 values="M100 50 L115 80 L105 125 L95 125 L85 80 Z;
-                                        M100 50 L120 85 L105 130 L95 130 L80 85 Z;
-                                        M100 50 L115 80 L105 125 L95 125 L85 80 Z" 
-                                 dur="2.5s" 
-                                 repeatCount="indefinite" />
-                    </path>
-                    
-                    <!-- Center ember -->
-                    <circle cx="100" cy="100" r="12" fill="#FFCC00" filter="url(#glow)">
-                        <animate attributeName="r" values="12;14;12" dur="2s" repeatCount="indefinite" />
-                        <animate attributeName="opacity" values="1;0.8;1" dur="2s" repeatCount="indefinite" />
-                    </circle>
-                </svg>
+                <img src="/images/logo.png" class="logo" alt="INFERNO Logo">
             </div>
-            <h1 class="token-name">$INFERNO</h1>
             <p class="slogan">BURN PROTOCOL ACTIVATED</p>
             <div class="hero-buttons">
                 <a href="#" class="button">
@@ -1832,6 +1810,7 @@
                     <span class="button-icon">↓</span>
                 </a>
             </div>
+        </section>
             
             <!-- Contract Address Display -->
             <div class="contract-display">
@@ -2040,7 +2019,7 @@
                 <div class="step">
                   <div class="step-icon active" style="box-shadow: 0 0 15px rgba(255, 69, 0, 0.25);">🔥</div>
                   <div class="step-title" style="color: #ff4500;">Burn</div>
-                  <div class="step-description">Tokens permanently removed</div>
+                  <div class="step-description">Tokens permanently burned</div>
                 </div>
                 <div class="step">
                   <div class="step-icon">📊</div>
@@ -2063,7 +2042,7 @@
                 </div>
                 
                 <div class="feature-box secondary">
-                    <span style="color: #ff8c00; font-weight: bold">2️⃣ Milestone Burns:</span> Major token burns are triggered when specific market cap thresholds are reached, from $100K to $100M. These milestone burns will ultimately consume 30% of the total supply, creating significant supply shocks as the token grows.
+                    <span style="color: #ff8c00; font-weight: bold">2️⃣ Milestone Burns:</span> Major token burns are triggered when specific market cap thresholds are reached, from $100K to $100M. These milestone burns will ultimately consume 25% of the total supply, creating significant supply shocks as the token grows.
                 </div>
             </div>
             </div>
@@ -2082,9 +2061,9 @@
                 </div>
                 <div class="tokenomics-card">
                     <div class="tokenomics-icon">🔥</div>
-                    <div class="tokenomics-title">30% Burn Wallet</div>
+                    <div class="tokenomics-title">25% Burn Wallet</div>
                     <div class="tokenomics-description">
-                        30% of tokens allocated to burn wallet for milestone unlocks.
+                        25% of tokens allocated to burn wallet for milestone unlocks.
                         <div class="burn-wallet">3BurnWalletAddressSol123456789abcdefghi</div>
                     </div>
                 </div>
@@ -2111,7 +2090,7 @@
                 <div class="footer-content">
                     <div class="join-section">
                         <h2 class="section-title">JOIN THE INFERNO</h2>
-                        <p class="follow-socials">Follow our socials to stay updated on burn statistics</p>
+                        <p class="follow-socials">Follow our socials to stay updated</p>
                         <div class="social-links">
                             <a href="#" class="social-link">𝕏</a>
                         </div>

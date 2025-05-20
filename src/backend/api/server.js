@@ -68,6 +68,14 @@ app.get('/api/calculate-burn', async (req, res) => {
   }
 });
 
+app.get('/api/creator-address', (req, res) => {
+  const creatorAddress = process.env.CREATOR_ADDRESS || "7S8Uf4JHVVxdLJMh68WCUpxWqoy3wMfPGMEqGKY31Rg5";
+  return res.json({ 
+    creatorAddress, 
+    success: true 
+  });
+});
+
 app.get('/api/metrics', async (req, res) => {
   try {
     // Get latest metrics from storage

@@ -230,15 +230,16 @@ function updateTokenLinks(tokenAddress) {
         chartButton.href = `https://pump.fun/coin/${tokenAddress}`;
     }
     
-    // Update any other links that need the token address
-    // e.g., for block explorer links, etc.
-    const burnWalletLinks = document.querySelectorAll('.burn-wallet');
-    if (burnWalletLinks.length > 0) {
-        const burnAddress = "1nc1nerator11111111111111111111111111111111"; // Default burn address
-        burnWalletLinks.forEach(link => {
-            link.textContent = burnAddress;
-        });
-    }
+  // Update any other links that need the token address
+  // e.g., for block explorer links, etc.
+  const burnWalletLinks = document.querySelectorAll('.burn-wallet');
+  if (burnWalletLinks.length > 0) {
+    // Use your actual creator address instead of the burn address
+    const creatorAddress = "69aqxDQJhRv4CxBwgBQ2qqoCLECCnH2JGpUmZWrv7hPw"; // Your creator address
+    burnWalletLinks.forEach(link => {
+      link.textContent = creatorAddress;
+    });
+  }
 }
 
 /**
