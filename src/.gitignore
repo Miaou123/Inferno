@@ -1,0 +1,7 @@
+
+# Live server data - don't track
+data/latest-price.json
+data/metrics.json
+data/milestones.json
+data/burns.json
+data/rewards.json
