@@ -70,7 +70,7 @@ app.get('/api/calculate-burn', async (req, res) => {
 });
 
 app.get('/api/creator-address', (req, res) => {
-  const creatorAddress = process.env.CREATOR_ADDRESS || "7S8Uf4JHVVxdLJMh68WCUpxWqoy3wMfPGMEqGKY31Rg5";
+  const creatorAddress = process.env.CREATOR_ADDRESS || "coming soon";
   return res.json({ 
     creatorAddress, 
     success: true 
@@ -241,7 +241,7 @@ app.get('/api/burn-stats', (req, res) => {
 
 app.get('/api/token-address', (req, res) => {
   // Get token address from environment variable
-  const tokenAddress = process.env.TOKEN_ADDRESS || "HJ2n2a3YK1LTBCRbS932cTtmXw4puhgG8Jb2WcpEpump";
+  const tokenAddress = process.env.TOKEN_ADDRESS || "coming soon";
   
   return res.json({ 
     tokenAddress, 
@@ -350,7 +350,7 @@ app.get('/api/burns', async (req, res) => {
   } catch (error) {
     console.error(`Erreur /api/burns: ${error.message}`);
     return res.status(500).json({ 
-      error: 'Erreur lors de la récupération des brûlures',
+      error: 'Error in getting the burns',
       message: error.message
     });
   }
