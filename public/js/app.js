@@ -76,6 +76,8 @@ async function initializeDashboard() {
             updateTokenAddress(tokenAddress);
             updateTokenLinks(tokenAddress);
         }
+
+        await updateBurnWalletLinks();
                 
         // Fetch initial data
         await fetchAndUpdateMetrics();
@@ -217,6 +219,14 @@ function updateTokenAddress(tokenAddress) {
     }
 }
 
+app.get('/api/creator-address', (req, res) => {
+    const creatorAddress = process.env.CREATOR_ADDRESS || "";
+    return res.json({ 
+      creatorAddress, 
+      success: true 
+    });
+  });
+
 /**
  * Update token links with actual token address
  * @param {string} tokenAddress - The token address from the API
@@ -230,16 +240,33 @@ function updateTokenLinks(tokenAddress) {
         chartButton.href = `https://pump.fun/coin/${tokenAddress}`;
     }
     
-  // Update any other links that need the token address
-  // e.g., for block explorer links, etc.
-  const burnWalletLinks = document.querySelectorAll('.burn-wallet');
-  if (burnWalletLinks.length > 0) {
-    // Use your actual creator address instead of the burn address
-    const creatorAddress = "69aqxDQJhRv4CxBwgBQ2qqoCLECCnH2JGpUmZWrv7hPw"; // Your creator address
-    burnWalletLinks.forEach(link => {
-      link.textContent = creatorAddress;
-    });
-  }
+    // Update burn wallet links with creator address from API
+    updateBurnWalletLinks();
+}
+
+/**
+ * Fetch and update burn wallet links with creator address from environment
+ */
+async function updateBurnWalletLinks() {
+    try {
+        const response = await fetch('/api/creator-address');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.creatorAddress) {
+                const burnWalletLinks = document.querySelectorAll('.burn-wallet');
+                burnWalletLinks.forEach(link => {
+                    link.textContent = data.creatorAddress;
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching creator address:', error);
+        // Fallback to a default if needed
+        const burnWalletLinks = document.querySelectorAll('.burn-wallet');
+        burnWalletLinks.forEach(link => {
+            link.textContent = "Loading...";
+        });
+    }
 }
 
 /**
@@ -718,60 +745,48 @@ function setupBurnWalletCopy() {
  */
 function setupStepHover() {
     const steps = document.querySelectorAll('.step');
-    const timelineDots = document.querySelectorAll('.timeline-dot');
+    const timeline = document.querySelector('.timeline');
     const stepIcons = document.querySelectorAll('.step-icon');
     const stepTitles = document.querySelectorAll('.step-title');
     
-    if (steps.length > 0 && timelineDots.length > 0) {
-        // Remove all active classes initially except for default
-        timelineDots.forEach((dot, idx) => {
-            if (idx !== 3) { // Only keep the Burn dot active by default
-                dot.classList.remove('active');
-            }
-        });
-        
+    if (steps.length > 0 && timeline) {
         // Set up hover effects for each step
         steps.forEach((step, index) => {
-            if (index < timelineDots.length) {
-                // On hover
-                step.addEventListener('mouseenter', () => {
-                    // Activate the timeline dot
-                    timelineDots.forEach(dot => dot.classList.remove('active'));
-                    timelineDots[index].classList.add('active');
-                    
-                    // Highlight step
+            // On hover
+            step.addEventListener('mouseenter', () => {
+                // Add glow to timeline
+                timeline.classList.add('glow');
+                
+                // Highlight step
+                if (stepIcons[index]) {
+                    stepIcons[index].style.borderColor = '#ff4500';
+                    stepIcons[index].style.backgroundColor = 'rgba(255, 69, 0, 0.1)';
+                    stepIcons[index].style.boxShadow = '0 0 15px rgba(255, 69, 0, 0.25)';
+                }
+                
+                if (stepTitles[index]) {
+                    stepTitles[index].style.color = '#ff4500';
+                }
+            });
+            
+            // On hover out
+            step.addEventListener('mouseleave', () => {
+                // Remove glow from timeline
+                timeline.classList.remove('glow');
+                
+                // Reset step styling (except for the active "Burn" step)
+                if (index !== 3) { // Keep the "Burn" step active
                     if (stepIcons[index]) {
-                        stepIcons[index].style.borderColor = '#ff4500';
-                        stepIcons[index].style.backgroundColor = 'rgba(255, 69, 0, 0.1)';
-                        stepIcons[index].style.boxShadow = '0 0 15px rgba(255, 69, 0, 0.25)';
+                        stepIcons[index].style.borderColor = '';
+                        stepIcons[index].style.backgroundColor = '';
+                        stepIcons[index].style.boxShadow = '';
                     }
                     
                     if (stepTitles[index]) {
-                        stepTitles[index].style.color = '#ff4500';
+                        stepTitles[index].style.color = '';
                     }
-                });
-                
-                // On hover out
-                step.addEventListener('mouseleave', () => {
-                    // Reset to default state
-                    if (index !== 3) { // Keep the "Burn" dot and step active
-                        timelineDots[index].classList.remove('active');
-                        
-                        if (stepIcons[index]) {
-                            stepIcons[index].style.borderColor = '';
-                            stepIcons[index].style.backgroundColor = '';
-                            stepIcons[index].style.boxShadow = '';
-                        }
-                        
-                        if (stepTitles[index]) {
-                            stepTitles[index].style.color = '';
-                        }
-                    }
-                    
-                    // Restore default active state
-                    timelineDots[3].classList.add('active');
-                });
-            }
+                }
+            });
         });
     }
 }

@@ -1379,6 +1379,11 @@
             position: relative;
             transition: all 0.3s;
         }
+
+        .step-icon svg {
+    width: 24px;
+    height: 24px;
+}
         
         .step-icon.active {
             border-color: var(--accent-primary);
@@ -1420,33 +1425,57 @@
         }
         
         .timeline {
-            position: absolute;
-            top: 30px;
-            left: 60px;
-            right: 60px;
-            height: 1px;
-            background: linear-gradient(to right, 
-                transparent 0%, 
-                var(--border-color) 10%,
-                var(--border-color) 90%,
-                transparent 100%
-            );
-        }
-        
-        .timeline-dot {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: var(--border-color);
-            top: -2.5px;
-            transition: all 0.3s;
-        }
-        
-        .timeline-dot.active {
-            background-color: var(--accent-primary);
-            box-shadow: 0 0 8px var(--accent-glow);
-        }
+    position: absolute;
+    top: 30px;
+    left: 60px;
+    right: 60px;
+    height: 1px;
+    background: linear-gradient(to right, 
+        transparent 0%, 
+        var(--border-color) 10%,
+        var(--border-color) 90%,
+        transparent 100%
+    );
+    transition: all 0.3s ease;
+}
+
+/* Timeline glow effect on step hover */
+.step:hover ~ .timeline,
+.step:hover + .step ~ .timeline,
+.step:hover + .step + .step ~ .timeline,
+.step:hover + .step + .step + .step ~ .timeline,
+.step:hover + .step + .step + .step + .step ~ .timeline {
+    background: linear-gradient(to right, 
+        transparent 0%, 
+        rgba(255, 69, 0, 0.6) 10%,
+        rgba(255, 69, 0, 0.8) 50%,
+        rgba(255, 69, 0, 0.6) 90%,
+        transparent 100%
+    );
+    box-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
+}
+
+/* Alternative approach - use JavaScript to add glow class */
+.timeline.glow {
+    background: linear-gradient(to right, 
+        transparent 0%, 
+        rgba(255, 69, 0, 0.6) 10%,
+        rgba(255, 69, 0, 0.8) 50%,
+        rgba(255, 69, 0, 0.6) 90%,
+        transparent 100%
+    );
+    box-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
+}
+
+.timeline-dot {
+    display: none;
+}
+
+.step-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
         
         .mechanism-description {
             text-align: center;
@@ -1591,10 +1620,9 @@
             opacity: 1;
         }
         
-        .tokenomics-icon {
-            font-size: 28px;
-            margin-bottom: 20px;
-            color: var(--accent-primary);
+        .tokenomics-icon svg {
+            width: 28px;
+            height: 28px;
         }
         
         .tokenomics-title {
@@ -1992,46 +2020,71 @@
         <section class="section" id="protocol">
             <h2 class="section-title" style="text-transform: uppercase; font-weight: 600; letter-spacing: 1px;">THE INFERNO PROTOCOL</h2>
             <div class="protocol-mechanism">
-              <div class="steps-container">
-                <div class="timeline">
-                  <span class="timeline-dot" style="left: 0%"></span>
-                  <span class="timeline-dot" style="left: 20%"></span>
-                  <span class="timeline-dot" style="left: 40%"></span>
-                  <span class="timeline-dot active" style="left: 60%"></span>
-                  <span class="timeline-dot" style="left: 80%"></span>
-                  <span class="timeline-dot" style="left: 100%"></span>
-                </div>
-                <div class="step">
-                  <div class="step-icon">📈</div>
-                  <div class="step-title">Volume</div>
-                  <div class="step-description">Trading generates volume and fees</div>
-                </div>
-                <div class="step">
-                  <div class="step-icon">💎</div>
-                  <div class="step-title">Collect</div>
-                  <div class="step-description">Creator rewards accumulate in SOL</div>
-                </div>
-                <div class="step">
-                  <div class="step-icon">↻</div>
-                  <div class="step-title">Buyback</div>
-                  <div class="step-description">SOL rewards buy $INFERNO tokens</div>
-                </div>
-                <div class="step">
-                  <div class="step-icon active" style="box-shadow: 0 0 15px rgba(255, 69, 0, 0.25);">🔥</div>
-                  <div class="step-title" style="color: #ff4500;">Burn</div>
-                  <div class="step-description">Tokens permanently burned</div>
-                </div>
-                <div class="step">
-                  <div class="step-icon">📊</div>
-                  <div class="step-title">Growth</div>
-                  <div class="step-description">Market cap increases</div>
-                </div>
-                <div class="step">
-                  <div class="step-icon">⭐</div>
-                  <div class="step-title">Milestones</div>
-                  <div class="step-description">Trigger major burns</div>
-                </div>
-              </div>
+                <div class="steps-container">
+                    <div class="timeline"></div>
+                    <div class="step">
+                      <div class="step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                          <polyline points="17 6 23 6 23 12"></polyline>
+                        </svg>
+                      </div>
+                      <div class="step-title">Volume</div>
+                      <div class="step-description">Trading generates volume and fees</div>
+                    </div>
+                    <div class="step">
+                      <div class="step-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M6 3H18L21 8L12 21L3 8L6 3Z"/>
+                          <path d="M6 8L12 21L18 8" fill="#ff8c00"/>
+                          <path d="M6 3L12 8L18 3" fill="#ffcc00"/>
+                        </svg>
+                      </div>
+                      <div class="step-title">Collect</div>
+                      <div class="step-description">Creator rewards accumulate in SOL</div>
+                    </div>
+                    <div class="step">
+                      <div class="step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M23 4V10H17"/>
+                          <path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/>
+                        </svg>
+                      </div>
+                      <div class="step-title">Buyback</div>
+                      <div class="step-description">SOL rewards buy $INFERNO tokens</div>
+                    </div>
+                    <div class="step">
+                      <div class="step-icon active" style="box-shadow: 0 0 15px rgba(255, 69, 0, 0.25);">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2C8 6 8 12 12 16C16 12 16 6 12 2Z"/>
+                          <path d="M8 16C6 18 6 20 8 22C10 20 10 18 8 16Z" fill="#ff8c00"/>
+                          <path d="M16 16C18 18 18 20 16 22C14 20 14 18 16 16Z" fill="#ff8c00"/>
+                        </svg>
+                      </div>
+                      <div class="step-title" style="color: #ff4500;">Burn</div>
+                      <div class="step-description">Tokens permanently burned</div>
+                    </div>
+                    <div class="step">
+                      <div class="step-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <rect x="3" y="12" width="4" height="9"/>
+                          <rect x="10" y="8" width="4" height="13"/>
+                          <rect x="17" y="4" width="4" height="17"/>
+                        </svg>
+                      </div>
+                      <div class="step-title">Growth</div>
+                      <div class="step-description">Market cap increases</div>
+                    </div>
+                    <div class="step">
+                      <div class="step-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                        </svg>
+                      </div>
+                      <div class="step-title">Milestones</div>
+                      <div class="step-description">Trigger major burns</div>
+                    </div>
+                  </div>
               <div class="mechanism-description">
                 <p>
                     The INFERNO Protocol features <strong style="color: #ffffff">dual burn mechanisms</strong> for maximum deflationary pressure:
@@ -2053,14 +2106,25 @@
             <h2 class="section-title">TOKENOMICS</h2>
             <div class="tokenomics-grid">
                 <div class="tokenomics-card">
-                    <div class="tokenomics-icon">🔍</div>
+                    <div class="tokenomics-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff4500" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </div>
                     <div class="tokenomics-title">1B Fixed Supply</div>
                     <div class="tokenomics-description">
                         Capped total supply with no minting capability - only burns.
                     </div>
                 </div>
                 <div class="tokenomics-card">
-                    <div class="tokenomics-icon">🔥</div>
+                    <div class="tokenomics-icon">
+                        <svg viewBox="0 0 24 24" fill="#ff4500">
+                            <path d="M12 2C8 6 8 12 12 16C16 12 16 6 12 2Z"/>
+                            <path d="M8 16C6 18 6 20 8 22C10 20 10 18 8 16Z" fill="#ff8c00"/>
+                            <path d="M16 16C18 18 18 20 16 22C14 20 14 18 16 16Z" fill="#ff8c00"/>
+                        </svg>
+                    </div>
                     <div class="tokenomics-title">25% Burn Wallet</div>
                     <div class="tokenomics-description">
                         25% of tokens allocated to burn wallet for milestone unlocks.
@@ -2068,14 +2132,25 @@
                     </div>
                 </div>
                 <div class="tokenomics-card">
-                    <div class="tokenomics-icon">💸</div>
+                    <div class="tokenomics-icon">
+                        <svg viewBox="0 0 24 24" fill="#ff4500">
+                            <rect x="2" y="6" width="20" height="12" rx="2" stroke="#ff4500" stroke-width="2" fill="none"/>
+                            <circle cx="12" cy="12" r="3" fill="#ff4500"/>
+                            <path d="M6 12V8" stroke="#ff4500" stroke-width="2"/>
+                            <path d="M18 12V8" stroke="#ff4500" stroke-width="2"/>
+                        </svg>
+                    </div>                    
                     <div class="tokenomics-title">Zero Tax</div>
                     <div class="tokenomics-description">
                         No transaction fees or taxes - pure trading experience.
                     </div>
                 </div>
                 <div class="tokenomics-card">
-                    <div class="tokenomics-icon">♾️</div>
+                    <div class="tokenomics-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff4500" stroke-width="3">
+                            <path d="M12 12C16 8 20 8 20 12C20 16 16 16 12 12C8 16 4 16 4 12C4 8 8 8 12 12Z"/>
+                        </svg>
+                    </div>                    
                     <div class="tokenomics-title">Automated Burn Loop</div>
                     <div class="tokenomics-description">
                         Creator rewards automatically bought back and burned.
