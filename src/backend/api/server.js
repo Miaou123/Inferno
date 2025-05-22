@@ -20,6 +20,7 @@ app.use(express.json({ limit: '1mb' }));
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../../../public')));
 
+
 // Initialize storage
 const initializeServer = async () => {
   try {

@@ -36,15 +36,13 @@ const logger = winston.createLogger({
   ]
 });
 
-// If we're not in production, log to the console with colorized output
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }));
-}
+// Always add the console transport regardless of environment
+logger.add(new winston.transports.Console({
+  format: winston.format.combine(
+    winston.format.colorize(),
+    winston.format.simple()
+  )
+}));
 
 // Add specialized loggers for different components
 logger.buyback = logger.child({ component: 'buyback' });
