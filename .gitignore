@@ -39,3 +39,5 @@ build/
 # Temporary files
 .tmp/
 temp/
+# Live server data - don't track
+data/
