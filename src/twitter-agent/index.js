@@ -358,7 +358,7 @@ class InfernoAgent {
         }, 60000); // Check every minute
     }
 
-    async run(intervalMinutes = 45) {
+    async run(baseIntervalMinutes = 240) { // 240 = 4 hours base
         const isTestMode = process.env.TEST_MODE === 'true';
         const singleTweet = process.env.SINGLE_TWEET === 'true';
         const testType = process.env.TEST_TYPE || 'random';
@@ -404,21 +404,41 @@ class InfernoAgent {
             }
         }
 
-        // Start burn monitoring
         this.startBurnMonitoring();
 
-        console.log(`⏰ Random tweet interval: ${intervalMinutes} minutes`);
+        console.log(`⏰ Random tweet interval: 3-5 hours (randomly selected each time)`);
+    
+        // Post initial tweet
+        try {
+            const initialTweet = await this.generateTweet('random');
+            await this.postTweet(initialTweet, 'random');
+        } catch (error) {
+            console.error('Failed to post initial tweet:', error);
+        }
+    
         
         while (true) {
             try {
+                // Generate random interval between 3-5 hours
+                const minHours = 3;
+                const maxHours = 5;
+                const randomHours = minHours + Math.random() * (maxHours - minHours);
+                const intervalMinutes = Math.floor(randomHours * 60);
+                
+                console.log(`🔥 Next random tweet in ${randomHours.toFixed(1)} hours (${intervalMinutes} minutes)`);
+                
+                // Wait for the random interval
+                await new Promise(resolve => setTimeout(resolve, intervalMinutes * 60 * 1000));
+                
+                // Generate and post tweet
                 const tweet = await this.generateTweet('random');
                 await this.postTweet(tweet, 'random');
-
-                const nextTweetDate = new Date(Date.now() + intervalMinutes * 60 * 1000);
-                console.log(`\n🔥 Next random tweet scheduled for: ${nextTweetDate.toLocaleString()}`);
+    
+                const nextRandomHours = 3 + Math.random() * 2; // Calculate next interval
+                const nextTweetDate = new Date(Date.now() + nextRandomHours * 60 * 60 * 1000);
+                console.log(`🔥 Next random tweet scheduled for approximately: ${nextTweetDate.toLocaleString()}`);
                 console.log('------------------------');
                 
-                await new Promise(resolve => setTimeout(resolve, intervalMinutes * 60 * 1000));
             } catch (error) {
                 console.error('\n❌ Error occurred:', error);
                 

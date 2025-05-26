@@ -5,12 +5,13 @@
 
 // Milestone burn schedule 
 const BURN_SCHEDULE = [
+  { marketCap: 50000, burnAmount: 25000000, percentOfSupply: 2.50 },
   { marketCap: 100000, burnAmount: 25000000, percentOfSupply: 2.50 },
   { marketCap: 200000, burnAmount: 20000000, percentOfSupply: 2.00 },
   { marketCap: 300000, burnAmount: 17500000, percentOfSupply: 1.75 },
-  { marketCap: 500000, burnAmount: 15000000, percentOfSupply: 1.50 },
-  { marketCap: 750000, burnAmount: 12500000, percentOfSupply: 1.25 },
-  { marketCap: 1000000, burnAmount: 12500000, percentOfSupply: 1.25 },
+  { marketCap: 500000, burnAmount: 17500000, percentOfSupply: 1.75 },
+  { marketCap: 750000, burnAmount: 15000000, percentOfSupply: 1.50 },
+  { marketCap: 1000000, burnAmount: 15000000, percentOfSupply: 1.50 },
   { marketCap: 1500000, burnAmount: 10000000, percentOfSupply: 1.00 },
   { marketCap: 2500000, burnAmount: 10000000, percentOfSupply: 1.00 },
   { marketCap: 3500000, burnAmount: 7500000, percentOfSupply: 0.75 },
@@ -23,7 +24,7 @@ const BURN_SCHEDULE = [
   { marketCap: 50000000, burnAmount: 5000000, percentOfSupply: 0.50 },
   { marketCap: 75000000, burnAmount: 7500000, percentOfSupply: 0.75 },
   { marketCap: 90000000, burnAmount: 7500000, percentOfSupply: 0.75 },
-  { marketCap: 100000000, burnAmount: 25000000, percentOfSupply: 2.50 }
+  { marketCap: 100000000, burnAmount: 30000000, percentOfSupply: 3.00 }
 ];
 
 /**
