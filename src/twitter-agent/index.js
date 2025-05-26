@@ -74,14 +74,13 @@ class InfernoAgent {
 
     async generateTweet(type = 'random', context = null, burnData = null) {
         try {
-            const selectedStyle = this.getTweetStyle();
-            console.log(`🎲 Selected tweet style: ${selectedStyle.type} (${selectedStyle.minLength}-${selectedStyle.maxLength} chars)`);
-
             let prompt, systemPrompt;
 
             switch (type) {
                 case 'random':
-                    // Generate fresh personality prompt each time for variety
+                    const selectedStyle = this.getTweetStyle();
+                    console.log(`🎲 Selected tweet style: ${selectedStyle.type} (${selectedStyle.minLength}-${selectedStyle.maxLength} chars)`);
+                    
                     systemPrompt = this.getPersonalityPrompt();
                     prompt = `Generate a ${selectedStyle.type} random tweet (between ${selectedStyle.minLength} and ${selectedStyle.maxLength} characters).
                             
@@ -100,40 +99,30 @@ class InfernoAgent {
                 case 'milestone':
                     systemPrompt = this.getPersonalityPrompt();
                     
-                    // Extract real data from burnData
                     const milestoneAmount = burnData.milestone || burnData.marketCapAtBurn || 0;
                     const tokensDestroyed = Math.round(burnData.burnAmount);
-                    const percentOfSupply = burnData.details?.percentOfSupply || ((burnData.burnAmount / 1000000000) * 100);
+                    const percentOfSupply = burnData.details?.percentOfSupply || 0;
                     const txHash = burnData.txSignature;
                     const shortTx = `${txHash.substring(0, 6)}...${txHash.substring(txHash.length - 4)}`;
                     const solscanLink = `https://solscan.io/tx/${txHash}`;
                     
-                    console.log(`🎯 Milestone burn data: ${tokensDestroyed.toLocaleString()} tokens, ${percentOfSupply.toFixed(2)}% supply, milestone ${milestoneAmount.toLocaleString()}`);
-                    
-                    prompt = `Generate a MILESTONE BURN announcement tweet (between 200 and 280 characters).
+                    prompt = `Generate a MILESTONE BURN announcement tweet (maximum 250 characters).
                             
                             REAL MILESTONE DATA:
-                            - Milestone reached: ${milestoneAmount.toLocaleString()} market cap
-                            - Tokens burned: ${tokensDestroyed.toLocaleString()} tokens  
-                            - Percentage of supply: ${percentOfSupply.toFixed(2)}%
+                            - Milestone reached: $${milestoneAmount.toLocaleString()} market cap
+                            - Tokens burned: ${tokensDestroyed.toLocaleString()} tokens
+                            - Percentage of supply: ${percentOfSupply}%
                             - Transaction: ${shortTx}
                             - Solscan link: ${solscanLink}
                             
-                            IMPORTANT: Your response MUST:
-                            1. Celebrate achieving the ${milestoneAmount.toLocaleString()} milestone 
-                            2. Include the exact tokens burned: ${tokensDestroyed.toLocaleString()} tokens
-                            3. Include the percentage: ${percentOfSupply.toFixed(2)}% of supply
-                            4. Include the Solscan link: ${solscanLink}
-                            5. Express your mischievous joy about the destruction
-                            6. Use your playful, wise personality
-                            7. Be between 200-280 characters total
-                            8. Return ONLY the tweet text with the link included`;
+                            Include the transaction as a clickable link: ${solscanLink}
+                            Express your mischievous delight about the destruction.
+                            Maximum 250 characters total. Return ONLY the tweet text with the link.`;
                     break;
 
                 case 'buyback':
                     systemPrompt = this.getPersonalityPrompt();
                     
-                    // Extract real data from burnData  
                     const solSpent = parseFloat(burnData.solSpent || 0);
                     const tokensBurned = Math.round(burnData.burnAmount);
                     const usdValue = parseFloat(burnData.solSpentUsd || 0);
@@ -141,31 +130,19 @@ class InfernoAgent {
                     const shortTx2 = `${txHash2.substring(0, 6)}...${txHash2.substring(txHash2.length - 4)}`;
                     const solscanLink2 = `https://solscan.io/tx/${txHash2}`;
                     
-                    console.log(`🎯 Buyback burn data: ${tokensBurned.toLocaleString()} tokens, ${solSpent} SOL (${usdValue.toFixed(2)})`);
-                    
-                    prompt = `Generate a BUYBACK BURN announcement tweet (between 200 and 280 characters).
+                    prompt = `Generate a BUYBACK BURN announcement tweet (maximum 250 characters).
                             
                             REAL BUYBACK DATA:
                             - SOL spent: ${solSpent} SOL
-                            - USD value: ${usdValue.toFixed(2)}
+                            - USD value: $${usdValue.toFixed(2)}
                             - Tokens burned: ${tokensBurned.toLocaleString()} tokens
                             - Transaction: ${shortTx2}
                             - Solscan link: ${solscanLink2}
                             
-                            IMPORTANT: Your response MUST:
-                            1. Celebrate the automatic buyback and burn
-                            2. Include tokens burned: ${tokensBurned.toLocaleString()} tokens
-                            3. Include either SOL amount (${solSpent} SOL) or USD value (${usdValue.toFixed(2)})
-                            4. Include the Solscan link: ${solscanLink2}
-                            5. Express joy about the automated destruction
-                            6. Use your mischievous, wise personality  
-                            7. Be between 200-280 characters total
-                            8. Return ONLY the tweet text with the link included`;
+                            Include the transaction as a clickable link: ${solscanLink2}
+                            Express joy about the automated destruction.
+                            Maximum 250 characters total. Return ONLY the tweet text with the link.`;
                     break;
-
-                default:
-                    systemPrompt = this.getPersonalityPrompt();
-                    prompt = `Generate a ${selectedStyle.type} tweet (between ${selectedStyle.minLength} and ${selectedStyle.maxLength} characters).`;
             }
 
             const message = await this.anthropic.messages.create({
@@ -178,69 +155,14 @@ class InfernoAgent {
 
             let tweet = message.content[0].text.trim();
 
-            // Remove any quotes that Claude might add
             if (tweet.startsWith('"') && tweet.endsWith('"')) {
                 tweet = tweet.slice(1, -1);
             }
 
-            // Smart length handling with regeneration for overly long tweets
-            const maxLength = type === 'random' ? selectedStyle.maxLength : 250;
-            const minLength = type === 'random' ? selectedStyle.minLength : 180;
-            
-            // If tweet is way too long, regenerate with stricter prompt
             if (tweet.length > 250) {
-                console.log(`⚠️ Tweet too long (${tweet.length}), regenerating with stricter limits...`);
-                
-                const strictPrompt = type === 'random' ? 
-                    `Generate a shorter ${selectedStyle.type} tweet. MAXIMUM ${maxLength} characters. Be concise and punchy. Express one clear thought.` :
-                    `Generate a shorter ${type} announcement. MAXIMUM 250 characters. Include essential data: tokens burned, milestone/SOL amount, and Solscan link only.`;
-                
-                const retryMessage = await this.anthropic.messages.create({
-                    model: "claude-3-5-sonnet-20241022",
-                    max_tokens: 150,
-                    temperature: 0.7, // Lower temperature for more controlled output
-                    system: systemPrompt,
-                    messages: [{ role: "user", content: strictPrompt }]
-                });
-                
-                tweet = retryMessage.content[0].text.trim();
-                if (tweet.startsWith('"') && tweet.endsWith('"')) {
-                    tweet = tweet.slice(1, -1);
-                }
-                
-                console.log(`🔄 Regenerated tweet length: ${tweet.length}`);
-            }
-            
-            // If still too long, do smart truncation
-            if (tweet.length > 250) {
-                console.log(`⚠️ Tweet still long (${tweet.length}), smart truncating to 250...`);
-                // For burn tweets, preserve the Solscan link
-                if (type !== 'random' && tweet.includes('https://solscan.io/tx/')) {
-                    const linkMatch = tweet.match(/(https:\/\/solscan\.io\/tx\/\S+)/);
-                    if (linkMatch) {
-                        const link = linkMatch[1];
-                        const textPart = tweet.replace(link, '').trim();
-                        const maxTextLength = 250 - link.length - 1; // -1 for space
-                        
-                        if (textPart.length > maxTextLength) {
-                            const truncatedText = textPart.substring(0, maxTextLength - 3) + '...';
-                            tweet = truncatedText + ' ' + link;
-                        }
-                    }
-                } else {
-                    // Regular truncation
-                    const truncated = tweet.substring(0, 247); // Reserve 3 chars for "..."
-                    const lastSpace = truncated.lastIndexOf(' ');
-                    tweet = lastSpace > 230 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
-                }
-            }
-            
-            // For random tweets, if too short, just log (don't regenerate to avoid loops)
-            if (tweet.length < minLength && type === 'random') {
-                console.log(`ℹ️ Tweet shorter than target (${tweet.length} < ${minLength}) but posting anyway`);
+                tweet = tweet.substring(0, 250);
             }
 
-            console.log(`📏 Final tweet length: ${tweet.length} (target: ${minLength}-${maxLength})`);
             return tweet;
         } catch (error) {
             console.error('Error generating tweet:', error);
@@ -486,8 +408,6 @@ class InfernoAgent {
         this.startBurnMonitoring();
 
         console.log(`⏰ Random tweet interval: ${intervalMinutes} minutes`);
-
-        // REMOVED: No initial tweet - let the main loop handle it
         
         while (true) {
             try {
