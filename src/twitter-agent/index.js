@@ -36,8 +36,6 @@ class InfernoAgent {
         
         // File monitoring
         this.burnsFilePath = path.join(__dirname, '../../data/burns.json');
-        this.lastProcessedBurnId = null;
-        this.loadLastProcessedBurn();
         
         console.log(`🔥 INFERNO Agent initialized - ${isTestMode ? 'TEST MODE' : 'LIVE MODE'} 🔥`);
         if (isTestMode) {
@@ -74,28 +72,6 @@ class InfernoAgent {
         console.log('✅ All required environment variables are present');
     }
 
-    loadLastProcessedBurn() {
-        try {
-            const stateFile = path.join(__dirname, 'last-processed-burn.txt');
-            if (fs.existsSync(stateFile)) {
-                this.lastProcessedBurnId = fs.readFileSync(stateFile, 'utf8').trim();
-                console.log(`📝 Loaded last processed burn ID: ${this.lastProcessedBurnId}`);
-            }
-        } catch (error) {
-            console.log('📝 No previous burn state found, starting fresh');
-        }
-    }
-
-    saveLastProcessedBurn(burnId) {
-        try {
-            const stateFile = path.join(__dirname, 'last-processed-burn.txt');
-            fs.writeFileSync(stateFile, burnId);
-            this.lastProcessedBurnId = burnId;
-        } catch (error) {
-            console.error('Error saving last processed burn:', error);
-        }
-    }
-
     async generateTweet(type = 'random', context = null, burnData = null) {
         try {
             const selectedStyle = this.getTweetStyle();
@@ -127,29 +103,31 @@ class InfernoAgent {
                     // Extract real data from burnData
                     const milestoneAmount = burnData.milestone || burnData.marketCapAtBurn || 0;
                     const tokensDestroyed = Math.round(burnData.burnAmount);
-                    const percentOfSupply = burnData.details?.percentOfSupply || 0;
+                    const percentOfSupply = burnData.details?.percentOfSupply || ((burnData.burnAmount / 1000000000) * 100);
                     const txHash = burnData.txSignature;
                     const shortTx = `${txHash.substring(0, 6)}...${txHash.substring(txHash.length - 4)}`;
                     const solscanLink = `https://solscan.io/tx/${txHash}`;
                     
-                    prompt = `Generate a MILESTONE BURN announcement tweet (between 180 and 250 characters).
+                    console.log(`🎯 Milestone burn data: ${tokensDestroyed.toLocaleString()} tokens, ${percentOfSupply.toFixed(2)}% supply, milestone ${milestoneAmount.toLocaleString()}`);
+                    
+                    prompt = `Generate a MILESTONE BURN announcement tweet (between 200 and 280 characters).
                             
                             REAL MILESTONE DATA:
                             - Milestone reached: ${milestoneAmount.toLocaleString()} market cap
-                            - Tokens burned: ${tokensDestroyed.toLocaleString()} tokens
-                            - Percentage of supply: ${percentOfSupply}%
+                            - Tokens burned: ${tokensDestroyed.toLocaleString()} tokens  
+                            - Percentage of supply: ${percentOfSupply.toFixed(2)}%
                             - Transaction: ${shortTx}
                             - Solscan link: ${solscanLink}
                             
                             IMPORTANT: Your response MUST:
-                            1. Celebrate the milestone achievement with genuine joy
-                            2. Mention the milestone amount (${milestoneAmount.toLocaleString()})
-                            3. Include tokens burned (${tokensDestroyed.toLocaleString()})
-                            4. Include the transaction as a clickable link: ${solscanLink}
-                            5. Express your mischievous delight about the destruction
+                            1. Celebrate achieving the ${milestoneAmount.toLocaleString()} milestone 
+                            2. Include the exact tokens burned: ${tokensDestroyed.toLocaleString()} tokens
+                            3. Include the percentage: ${percentOfSupply.toFixed(2)}% of supply
+                            4. Include the Solscan link: ${solscanLink}
+                            5. Express your mischievous joy about the destruction
                             6. Use your playful, wise personality
-                            7. Be between 180-250 characters total
-                            8. Return ONLY the tweet text with the link`;
+                            7. Be between 200-280 characters total
+                            8. Return ONLY the tweet text with the link included`;
                     break;
 
                 case 'buyback':
@@ -163,7 +141,9 @@ class InfernoAgent {
                     const shortTx2 = `${txHash2.substring(0, 6)}...${txHash2.substring(txHash2.length - 4)}`;
                     const solscanLink2 = `https://solscan.io/tx/${txHash2}`;
                     
-                    prompt = `Generate a BUYBACK BURN announcement tweet (between 180 and 250 characters).
+                    console.log(`🎯 Buyback burn data: ${tokensBurned.toLocaleString()} tokens, ${solSpent} SOL (${usdValue.toFixed(2)})`);
+                    
+                    prompt = `Generate a BUYBACK BURN announcement tweet (between 200 and 280 characters).
                             
                             REAL BUYBACK DATA:
                             - SOL spent: ${solSpent} SOL
@@ -174,13 +154,13 @@ class InfernoAgent {
                             
                             IMPORTANT: Your response MUST:
                             1. Celebrate the automatic buyback and burn
-                            2. Include SOL spent (${solSpent} SOL) or USD value (${usdValue.toFixed(2)})
-                            3. Include tokens burned (${tokensBurned.toLocaleString()})
-                            4. Include the transaction as a clickable link: ${solscanLink2}
+                            2. Include tokens burned: ${tokensBurned.toLocaleString()} tokens
+                            3. Include either SOL amount (${solSpent} SOL) or USD value (${usdValue.toFixed(2)})
+                            4. Include the Solscan link: ${solscanLink2}
                             5. Express joy about the automated destruction
-                            6. Use your mischievous, wise personality
-                            7. Be between 180-250 characters total
-                            8. Return ONLY the tweet text with the link`;
+                            6. Use your mischievous, wise personality  
+                            7. Be between 200-280 characters total
+                            8. Return ONLY the tweet text with the link included`;
                     break;
 
                 default:
@@ -207,11 +187,13 @@ class InfernoAgent {
             const maxLength = type === 'random' ? selectedStyle.maxLength : 250;
             const minLength = type === 'random' ? selectedStyle.minLength : 180;
             
-            // If tweet is way too long (250+), regenerate with stricter prompt
+            // If tweet is way too long, regenerate with stricter prompt
             if (tweet.length > 250) {
-                console.log(`⚠️ Tweet way too long (${tweet.length}), regenerating with stricter limits...`);
+                console.log(`⚠️ Tweet too long (${tweet.length}), regenerating with stricter limits...`);
                 
-                const strictPrompt = `Generate a shorter ${selectedStyle.type} tweet. MAXIMUM ${maxLength} characters. Be concise and punchy. ${type === 'random' ? 'Express one clear thought.' : 'Include the essential data and link only.'}`;
+                const strictPrompt = type === 'random' ? 
+                    `Generate a shorter ${selectedStyle.type} tweet. MAXIMUM ${maxLength} characters. Be concise and punchy. Express one clear thought.` :
+                    `Generate a shorter ${type} announcement. MAXIMUM 250 characters. Include essential data: tokens burned, milestone/SOL amount, and Solscan link only.`;
                 
                 const retryMessage = await this.anthropic.messages.create({
                     model: "claude-3-5-sonnet-20241022",
@@ -230,12 +212,27 @@ class InfernoAgent {
             }
             
             // If still too long, do smart truncation
-            if (tweet.length > maxLength) {
-                console.log(`⚠️ Tweet still long (${tweet.length}), smart truncating to ${maxLength}...`);
-                // Truncate at word boundary if possible
-                const truncated = tweet.substring(0, maxLength - 3); // Reserve 3 chars for "..."
-                const lastSpace = truncated.lastIndexOf(' ');
-                tweet = lastSpace > maxLength * 0.8 ? truncated.substring(0, lastSpace) + '...' : truncated;
+            if (tweet.length > 250) {
+                console.log(`⚠️ Tweet still long (${tweet.length}), smart truncating to 250...`);
+                // For burn tweets, preserve the Solscan link
+                if (type !== 'random' && tweet.includes('https://solscan.io/tx/')) {
+                    const linkMatch = tweet.match(/(https:\/\/solscan\.io\/tx\/\S+)/);
+                    if (linkMatch) {
+                        const link = linkMatch[1];
+                        const textPart = tweet.replace(link, '').trim();
+                        const maxTextLength = 250 - link.length - 1; // -1 for space
+                        
+                        if (textPart.length > maxTextLength) {
+                            const truncatedText = textPart.substring(0, maxTextLength - 3) + '...';
+                            tweet = truncatedText + ' ' + link;
+                        }
+                    }
+                } else {
+                    // Regular truncation
+                    const truncated = tweet.substring(0, 247); // Reserve 3 chars for "..."
+                    const lastSpace = truncated.lastIndexOf(' ');
+                    tweet = lastSpace > 230 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
+                }
             }
             
             // For random tweets, if too short, just log (don't regenerate to avoid loops)
@@ -295,40 +292,41 @@ class InfernoAgent {
 
     checkForNewBurns() {
         try {
+            console.log('🔍 Checking for new burns...');
+            
             if (!fs.existsSync(this.burnsFilePath)) {
+                console.log('❌ Burns file does not exist');
                 return [];
             }
 
             const burns = JSON.parse(fs.readFileSync(this.burnsFilePath, 'utf8'));
             
             if (!Array.isArray(burns) || burns.length === 0) {
+                console.log('❌ No burns found in file');
                 return [];
             }
 
-            // Sort by timestamp to get newest first
-            burns.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            console.log(`📊 Found ${burns.length} total burns in file`);
 
             // Filter out burns that were already tweeted
             const untweetedBurns = burns.filter(burn => !burn.tweetPosted);
+            console.log(`📊 Found ${untweetedBurns.length} untweeted burns`);
 
-            // If no last processed burn, take the most recent untweeted one as starting point
-            if (!this.lastProcessedBurnId && untweetedBurns.length > 0) {
-                this.saveLastProcessedBurn(untweetedBurns[0].id);
-                return [];
+            // Debug: Log details about each burn
+            burns.forEach(burn => {
+                const status = burn.tweetPosted ? '✅ Tweeted' : '⏳ Pending';
+                console.log(`   - ${burn.id} (${burn.burnType}): ${status}`);
+            });
+
+            if (untweetedBurns.length > 0) {
+                // Sort untweeted burns by timestamp (oldest first) for proper chronological order
+                const orderedBurns = untweetedBurns.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                console.log(`📤 Returning ${orderedBurns.length} untweeted burns for processing (oldest first)`);
+                return orderedBurns;
             }
 
-            // Find new burns since last processed that haven't been tweeted
-            const lastProcessedIndex = burns.findIndex(burn => burn.id === this.lastProcessedBurnId);
-            
-            if (lastProcessedIndex === -1) {
-                // Last processed burn not found, process the most recent untweeted one
-                return untweetedBurns.length > 0 ? [untweetedBurns[0]] : [];
-            }
-
-            // Return burns that are newer than the last processed one AND haven't been tweeted
-            const newBurns = burns.slice(0, lastProcessedIndex).filter(burn => !burn.tweetPosted);
-            
-            return newBurns;
+            console.log(`📤 No untweeted burns to process`);
+            return [];
         } catch (error) {
             console.error('Error checking for new burns:', error);
             return [];
@@ -392,9 +390,6 @@ class InfernoAgent {
             // Mark this burn as tweeted by updating the burns.json file
             await this.markBurnAsTweeted(burn.id);
             
-            // Save this as the last processed burn
-            this.saveLastProcessedBurn(burn.id);
-            
             console.log(`✅ Processed ${burnType} burn successfully and marked as tweeted`);
         } catch (error) {
             console.error(`Error processing burn ${burn.id}:`, error);
@@ -404,7 +399,24 @@ class InfernoAgent {
     async startBurnMonitoring() {
         console.log('👁️ Starting burn file monitoring...');
         
+        // Do an initial check for existing burns
+        console.log('🔍 Doing initial burn check...');
+        const existingBurns = this.checkForNewBurns();
+        
+        if (existingBurns.length > 0) {
+            console.log(`🔥 Found ${existingBurns.length} existing burns to process`);
+            
+            for (const burn of existingBurns) {
+                await this.processBurn(burn);
+                // Wait a bit between burns to avoid spam
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        } else {
+            console.log('✅ No existing burns to process');
+        }
+        
         setInterval(async () => {
+            console.log('⏰ Periodic burn check...');
             const newBurns = this.checkForNewBurns();
             
             if (newBurns.length > 0) {
@@ -418,6 +430,8 @@ class InfernoAgent {
                     // Wait a bit between burns to avoid spam
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 }
+            } else {
+                console.log('✅ No new burns found');
             }
         }, 60000); // Check every minute
     }
@@ -452,7 +466,7 @@ class InfernoAgent {
                         solSpent: 0.00047047325,
                         burnAmount: 15139.295817,
                         solSpentUsd: 0.0495235,
-                        txSignature: "36hsSiwtq7MMx3WvwJqKHwkaz9FbhKBCwyuxoZJh7kA6ykWbkDMhZqZ57LjzLA1fydxRfmR2S2Cdu6M6wZD49ftm"
+                        txSignature: "36hsSiwtq7MMx3WvwJqKHwk9FbhKBCwyuxoZJh7kA6ykWbkDMhZqZ57LjzLA1fydxRfmR2S2Cdu6M6wZD49ftm"
                     };
                     tweet = await this.generateTweet('buyback', null, mockBurn);
                 } else {
@@ -473,14 +487,8 @@ class InfernoAgent {
 
         console.log(`⏰ Random tweet interval: ${intervalMinutes} minutes`);
 
-        // Post initial tweet
-        try {
-            const initialTweet = await this.generateTweet('random');
-            await this.postTweet(initialTweet, 'random');
-        } catch (error) {
-            console.error('Failed to post initial tweet:', error);
-        }
-
+        // REMOVED: No initial tweet - let the main loop handle it
+        
         while (true) {
             try {
                 const tweet = await this.generateTweet('random');
