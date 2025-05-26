@@ -272,6 +272,18 @@
         width: 250px;
         height: 250px;
     }
+
+    .simplified-flow-mobile {
+        display: flex !important;
+    }
+
+    .desktop-text {
+        display: none;
+    }
+    
+    .mobile-text {
+        display: inline;
+    }
 }
 
 @media (max-width: 480px) {
@@ -288,6 +300,29 @@
     .logo-small img.logo-glow-effect {
         width: 32px;
         height: 32px;
+    }
+
+    .burn-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 12px 10px;
+    }
+    
+    .stat-label {
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+    
+    .stat-value {
+        font-size: 14px;
+    }
+    
+    .stat-sub {
+        font-size: 10px;
+        margin-top: 3px;
     }
 }
 
@@ -799,6 +834,14 @@
             font-weight: bold;
             color: var(--accent-tertiary);
         }
+
+        .desktop-text {
+    display: inline;
+}
+
+.mobile-text {
+    display: none;
+}
         
         /* Detailed Burn Metrics styles */
         .protocol-metrics-container {
@@ -1727,7 +1770,7 @@
         @media (max-width: 992px) {
             .tokenomics-grid, .burn-stats-grid {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
+                gap: 15px;
             }
             
             .footer-container {
@@ -1741,12 +1784,140 @@
         }
         
         @media (max-width: 768px) {
-            .steps-container {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 40px;
+
+            .burn-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                margin-top: 20px;
             }
             
+            /* Make stat cards more compact on mobile */
+            .stat-card {
+                padding: 15px 12px; /* Reduced from 20px */
+                border-radius: 6px;
+            }
+            
+            .stat-label {
+                font-size: 12px; /* Reduced from 14px */
+                margin-bottom: 8px; /* Reduced from 10px */
+                line-height: 1.3;
+            }
+            
+            .stat-value {
+                font-size: 16px; /* Reduced from 20px */
+                font-weight: 700;
+                line-height: 1.2;
+            }
+            
+            .stat-sub {
+                font-size: 11px; /* Reduced from 12px */
+                margin-top: 4px; /* Reduced from 5px */
+                line-height: 1.3;
+            }
+
+            /* Hide the original steps container on mobile */
+            .steps-container {
+                display: none;
+            }
+            
+            /* Create the simplified mobile flow */
+            .protocol-mechanism {
+                padding: 25px 20px; /* Reduced padding for mobile */
+            }
+            
+            /* Mobile simplified flow container */
+            .simplified-flow-mobile {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 25px;
+                position: relative;
+                padding: 0 5px;
+            }
+            
+            .flow-step-mobile {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                flex: 1;
+                position: relative;
+            }
+            
+            .flow-icon-mobile {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background-color: var(--dark-bg);
+                border: 2px solid var(--border-color);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 8px;
+                font-size: 16px;
+                transition: all 0.3s;
+            }
+            
+            .flow-icon-mobile.active {
+                border-color: var(--accent-primary);
+                background-color: rgba(255, 69, 0, 0.1);
+                box-shadow: 0 0 8px rgba(255, 69, 0, 0.25);
+            }
+            
+            .flow-icon-mobile svg {
+                width: 18px;
+                height: 18px;
+            }
+            
+            .flow-title-mobile {
+                font-size: 12px;
+                font-weight: bold;
+                color: var(--text-primary);
+                text-align: center;
+                line-height: 1.2;
+            }
+            
+            .flow-arrow-mobile {
+                position: absolute;
+                right: -12px;
+                top: 20px;
+                color: var(--accent-primary);
+                font-size: 14px;
+                z-index: 2;
+                font-weight: bold;
+            }
+            
+            .flow-step-mobile:last-child .flow-arrow-mobile {
+                display: none;
+            }
+            
+            /* Adjust mechanism description for mobile */
+            .mechanism-description {
+                padding: 0 5px;
+                font-size: 14px;
+            }
+            
+            .mechanism-description p {
+                margin-bottom: 12px;
+                line-height: 1.5;
+            }
+            
+            .mechanism-description .feature-box {
+                padding: 12px;
+                margin-bottom: 12px;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+            
+            .mechanism-description .feature-box.primary {
+                background-color: rgba(255, 69, 0, 0.05);
+                border-left: 3px solid #ff4500;
+            }
+            
+            .mechanism-description .feature-box.secondary {
+                background-color: rgba(255, 140, 0, 0.05);
+                border-left: 3px solid #ff8c00;
+            }
+                    
             .timeline {
                 display: none;
             }
@@ -1772,13 +1943,91 @@
             .history-table td:nth-child(1) {
                 display: none;
             }
+
+                /* Compact grid for mobile */
+    .tokenomics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px; /* Reduced from 30px */
+    }
+    
+    .tokenomics-card {
+        background-color: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px; /* Slightly smaller radius */
+        padding: 15px; /* Reduced from 30px */
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.2); /* Slightly smaller shadow */
+        text-align: center;
+    }
+    
+    .tokenomics-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+        z-index: 1;
+        opacity: 1; /* Always visible on mobile for better visual hierarchy */
+    }
+    
+    .tokenomics-card:hover {
+        transform: translateY(-2px); /* Reduced hover effect */
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .tokenomics-icon {
+        margin-bottom: 8px; /* Reduced from default */
+    }
+    
+    .tokenomics-icon svg {
+        width: 20px; /* Reduced from 28px */
+        height: 20px;
+        fill: var(--accent-primary);
+        stroke: var(--accent-primary);
+    }
+    
+    .tokenomics-title {
+        font-size: 16px; /* Reduced from 20px */
+        font-weight: bold;
+        margin-bottom: 8px; /* Reduced from 10px */
+        color: var(--text-primary);
+        line-height: 1.2;
+    }
+    
+    .tokenomics-description {
+        font-size: 12px; /* Reduced from 14px */
+        color: var(--text-secondary);
+        line-height: 1.4; /* Tighter line height */
+    }
+    
+    .burn-wallet {
+        margin-top: 8px; /* Reduced from 10px */
+        font-family: 'Courier New', monospace;
+        font-size: 10px; /* Reduced from 12px */
+        background-color: rgba(255, 69, 0, 0.1);
+        border-radius: 3px; /* Smaller radius */
+        padding: 4px 6px; /* Reduced padding */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-all;
+        color: var(--accent-primary);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .burn-wallet:hover {
+        background-color: rgba(255, 69, 0, 0.15);
+        transform: translateY(-1px); /* Reduced hover effect */
+    }
         }
         
         @media (max-width: 576px) {
-            .tokenomics-grid, .burn-stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
+
             .hero-buttons {
                 flex-direction: column;
                 width: 100%;
@@ -2024,144 +2273,198 @@
         <section class="section" id="protocol">
             <h2 class="section-title" style="text-transform: uppercase; font-weight: 600; letter-spacing: 1px;">THE INFERNO PROTOCOL</h2>
             <div class="protocol-mechanism">
+                <!-- Original desktop steps container (hidden on mobile) -->
                 <div class="steps-container">
                     <div class="timeline"></div>
                     <div class="step">
-                      <div class="step-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                          <polyline points="17 6 23 6 23 12"></polyline>
-                        </svg>
-                      </div>
-                      <div class="step-title">Volume</div>
-                      <div class="step-description">Trading generates volume and fees</div>
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                <polyline points="17 6 23 6 23 12"></polyline>
+                            </svg>
+                        </div>
+                        <div class="step-title">Volume</div>
+                        <div class="step-description">Trading generates volume and fees</div>
                     </div>
                     <div class="step">
-                      <div class="step-icon">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M6 3H18L21 8L12 21L3 8L6 3Z"/>
-                          <path d="M6 8L12 21L18 8" fill="#ff8c00"/>
-                          <path d="M6 3L12 8L18 3" fill="#ffcc00"/>
-                        </svg>
-                      </div>
-                      <div class="step-title">Collect</div>
-                      <div class="step-description">Creator rewards accumulate in SOL</div>
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 3H18L21 8L12 21L3 8L6 3Z"/>
+                                <path d="M6 8L12 21L18 8" fill="#ff8c00"/>
+                                <path d="M6 3L12 8L18 3" fill="#ffcc00"/>
+                            </svg>
+                        </div>
+                        <div class="step-title">Collect</div>
+                        <div class="step-description">Creator rewards accumulate in SOL</div>
                     </div>
                     <div class="step">
-                      <div class="step-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M23 4V10H17"/>
-                          <path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/>
-                        </svg>
-                      </div>
-                      <div class="step-title">Buyback</div>
-                      <div class="step-description">SOL rewards buy $INFERNO tokens</div>
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4V10H17"/>
+                                <path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/>
+                            </svg>
+                        </div>
+                        <div class="step-title">Buyback</div>
+                        <div class="step-description">SOL rewards buy $INFERNO tokens</div>
                     </div>
                     <div class="step">
-                      <div class="step-icon active" style="box-shadow: 0 0 15px rgba(255, 69, 0, 0.25);">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2C8 6 8 12 12 16C16 12 16 6 12 2Z"/>
-                          <path d="M8 16C6 18 6 20 8 22C10 20 10 18 8 16Z" fill="#ff8c00"/>
-                          <path d="M16 16C18 18 18 20 16 22C14 20 14 18 16 16Z" fill="#ff8c00"/>
-                        </svg>
-                      </div>
-                      <div class="step-title" style="color: #ff4500;">Burn</div>
-                      <div class="step-description">Tokens permanently burned</div>
+                        <div class="step-icon active" style="box-shadow: 0 0 15px rgba(255, 69, 0, 0.25);">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C8 6 8 12 12 16C16 12 16 6 12 2Z"/>
+                                <path d="M8 16C6 18 6 20 8 22C10 20 10 18 8 16Z" fill="#ff8c00"/>
+                                <path d="M16 16C18 18 18 20 16 22C14 20 14 18 16 16Z" fill="#ff8c00"/>
+                            </svg>
+                        </div>
+                        <div class="step-title" style="color: #ff4500;">Burn</div>
+                        <div class="step-description">Tokens permanently burned</div>
                     </div>
                     <div class="step">
-                      <div class="step-icon">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <rect x="3" y="12" width="4" height="9"/>
-                          <rect x="10" y="8" width="4" height="13"/>
-                          <rect x="17" y="4" width="4" height="17"/>
-                        </svg>
-                      </div>
-                      <div class="step-title">Growth</div>
-                      <div class="step-description">Market cap increases</div>
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <rect x="3" y="12" width="4" height="9"/>
+                                <rect x="10" y="8" width="4" height="13"/>
+                                <rect x="17" y="4" width="4" height="17"/>
+                            </svg>
+                        </div>
+                        <div class="step-title">Growth</div>
+                        <div class="step-description">Market cap increases</div>
                     </div>
                     <div class="step">
-                      <div class="step-icon">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-                        </svg>
-                      </div>
-                      <div class="step-title">Milestones</div>
-                      <div class="step-description">Trigger major burns</div>
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                            </svg>
+                        </div>
+                        <div class="step-title">Milestones</div>
+                        <div class="step-description">Trigger major burns</div>
                     </div>
-                  </div>
-              <div class="mechanism-description">
-                <p>
-                    The INFERNO Protocol features <strong style="color: #ffffff">dual burn mechanisms</strong> for maximum deflationary pressure:
-                </p>
-                
-                <div class="feature-box primary">
-                    <span class="burn-feature">1️⃣ Automated Buyback & Burn:</span> Leverages pump.fun's creator revenue sharing to fuel a perpetual burn cycle. Every trade generates rewards that are automatically claimed, used to buy back tokens, and then burned—creating an unstoppable deflationary loop.
                 </div>
-                
-                <div class="feature-box secondary">
-                    <span style="color: #ff8c00; font-weight: bold">2️⃣ Milestone Burns:</span> Major token burns are triggered when specific market cap thresholds are reached, from $100K to $100M. These milestone burns will ultimately consume 25% of the total supply, creating significant supply shocks as the token grows.
-                </div>
-            </div>
-            </div>
-          </section>
         
-        <!-- Tokenomics section -->
-        <section class="section" id="tokenomics">
-            <h2 class="section-title">TOKENOMICS</h2>
-            <div class="tokenomics-grid">
-                <div class="tokenomics-card">
-                    <div class="tokenomics-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff4500" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.35-4.35"></path>
-                        </svg>
+                <!-- New mobile simplified flow (only visible on mobile) -->
+                <div class="simplified-flow-mobile" style="display: none;">
+                    <div class="flow-step-mobile">
+                        <div class="flow-icon-mobile">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                <polyline points="17 6 23 6 23 12"></polyline>
+                            </svg>
+                        </div>
+                        <div class="flow-title-mobile">Trade</div>
+                        <div class="flow-arrow-mobile">→</div>
                     </div>
-                    <div class="tokenomics-title">1B Fixed Supply</div>
-                    <div class="tokenomics-description">
-                        Capped total supply with no minting capability - only burns.
+                    
+                    <div class="flow-step-mobile">
+                        <div class="flow-icon-mobile">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 3H18L21 8L12 21L3 8L6 3Z"/>
+                                <path d="M6 8L12 21L18 8" fill="#ff8c00"/>
+                                <path d="M6 3L12 8L18 3" fill="#ffcc00"/>
+                            </svg>
+                        </div>
+                        <div class="flow-title-mobile">Collect</div>
+                        <div class="flow-arrow-mobile">→</div>
+                    </div>
+                    
+                    <div class="flow-step-mobile">
+                        <div class="flow-icon-mobile">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4V10H17"/>
+                                <path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/>
+                            </svg>
+                        </div>
+                        <div class="flow-title-mobile">Buyback</div>
+                        <div class="flow-arrow-mobile">→</div>
+                    </div>
+                    
+                    <div class="flow-step-mobile">
+                        <div class="flow-icon-mobile active">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C8 6 8 12 12 16C16 12 16 6 12 2Z"/>
+                                <path d="M8 16C6 18 6 20 8 22C10 20 10 18 8 16Z" fill="#ff8c00"/>
+                                <path d="M16 16C18 18 18 20 16 22C14 20 14 18 16 16Z" fill="#ff8c00"/>
+                            </svg>
+                        </div>
+                        <div class="flow-title-mobile" style="color: #ff4500;">Burn</div>
                     </div>
                 </div>
-                <div class="tokenomics-card">
-                    <div class="tokenomics-icon">
-                        <svg viewBox="0 0 24 24" fill="#ff4500">
-                            <path d="M12 2C8 6 8 12 12 16C16 12 16 6 12 2Z"/>
-                            <path d="M8 16C6 18 6 20 8 22C10 20 10 18 8 16Z" fill="#ff8c00"/>
-                            <path d="M16 16C18 18 18 20 16 22C14 20 14 18 16 16Z" fill="#ff8c00"/>
-                        </svg>
+        
+                <div class="mechanism-description">
+                    <p>
+                        The INFERNO Protocol features <strong style="color: #ffffff">dual burn mechanisms</strong> for maximum deflationary pressure:
+                    </p>
+                    
+                    <div class="feature-box primary">
+                        <span class="burn-feature">1️⃣ Automated Buyback & Burn:</span> Leverages pump.fun's creator revenue sharing to fuel a perpetual burn cycle. Every trade generates rewards that are automatically claimed, used to buy back tokens, and then burned—creating an unstoppable deflationary loop.
                     </div>
-                    <div class="tokenomics-title">25% Burn Wallet</div>
-                    <div class="tokenomics-description">
-                        25% of tokens allocated to burn wallet for milestone unlocks.
-                        <div class="burn-wallet">3BurnWalletAddressSol123456789abcdefghi</div>
-                    </div>
-                </div>
-                <div class="tokenomics-card">
-                    <div class="tokenomics-icon">
-                        <svg viewBox="0 0 24 24" fill="#ff4500">
-                            <rect x="2" y="6" width="20" height="12" rx="2" stroke="#ff4500" stroke-width="2" fill="none"/>
-                            <circle cx="12" cy="12" r="3" fill="#ff4500"/>
-                            <path d="M6 12V8" stroke="#ff4500" stroke-width="2"/>
-                            <path d="M18 12V8" stroke="#ff4500" stroke-width="2"/>
-                        </svg>
-                    </div>                    
-                    <div class="tokenomics-title">Zero Tax</div>
-                    <div class="tokenomics-description">
-                        No transaction fees or taxes - pure trading experience.
-                    </div>
-                </div>
-                <div class="tokenomics-card">
-                    <div class="tokenomics-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff4500" stroke-width="3">
-                            <path d="M12 12C16 8 20 8 20 12C20 16 16 16 12 12C8 16 4 16 4 12C4 8 8 8 12 12Z"/>
-                        </svg>
-                    </div>                    
-                    <div class="tokenomics-title">Automated Burn Loop</div>
-                    <div class="tokenomics-description">
-                        Creator rewards automatically bought back and burned.
+                    
+                    <div class="feature-box secondary">
+                        <span style="color: #ff8c00; font-weight: bold">2️⃣ Milestone Burns:</span> Major token burns are triggered when specific market cap thresholds are reached, from $100K to $100M. These milestone burns will ultimately consume 25% of the total supply, creating significant supply shocks as the token grows.
                     </div>
                 </div>
             </div>
         </section>
+        
+ <!-- Updated Tokenomics section with mobile-optimized content -->
+<section class="section" id="tokenomics">
+    <h2 class="section-title">TOKENOMICS</h2>
+    <div class="tokenomics-grid">
+        <div class="tokenomics-card">
+            <div class="tokenomics-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ff4500" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+            </div>
+            <div class="tokenomics-title">1B Fixed Supply</div>
+            <div class="tokenomics-description">
+                <span class="desktop-text">Capped total supply with no minting capability - only burns.</span>
+                <span class="mobile-text">Capped total supply with no minting capability.</span>
+            </div>
+        </div>
+        <div class="tokenomics-card">
+            <div class="tokenomics-icon">
+                <svg viewBox="0 0 24 24" fill="#ff4500">
+                    <path d="M12 2C8 6 8 12 12 16C16 12 16 6 12 2Z"/>
+                    <path d="M8 16C6 18 6 20 8 22C10 20 10 18 8 16Z" fill="#ff8c00"/>
+                    <path d="M16 16C18 18 18 20 16 22C14 20 14 18 16 16Z" fill="#ff8c00"/>
+                </svg>
+            </div>
+            <div class="tokenomics-title">25% Burn Wallet</div>
+            <div class="tokenomics-description">
+                <span class="desktop-text">25% of tokens allocated to burn wallet for milestone unlocks.</span>
+                <span class="mobile-text">25% of tokens for milestone unlocks.</span>
+                <div class="burn-wallet">3BurnWalletAddressSol123456789abcdefghi</div>
+            </div>
+        </div>
+        <div class="tokenomics-card">
+            <div class="tokenomics-icon">
+                <svg viewBox="0 0 24 24" fill="#ff4500">
+                    <rect x="2" y="6" width="20" height="12" rx="2" stroke="#ff4500" stroke-width="2" fill="none"/>
+                    <circle cx="12" cy="12" r="3" fill="#ff4500"/>
+                    <path d="M6 12V8" stroke="#ff4500" stroke-width="2"/>
+                    <path d="M18 12V8" stroke="#ff4500" stroke-width="2"/>
+                </svg>
+            </div>
+            <div class="tokenomics-title">Zero Tax</div>
+            <div class="tokenomics-description">
+                <span class="desktop-text">No transaction fees or taxes - pure trading experience.</span>
+                <span class="mobile-text">No transaction fees or taxes.</span>
+            </div>
+        </div>
+        <div class="tokenomics-card">
+            <div class="tokenomics-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ff4500" stroke-width="3">
+                    <path d="M12 12C16 8 20 8 20 12C20 16 16 16 12 12C8 16 4 16 4 12C4 8 8 8 12 12Z"/>
+                </svg>
+            </div>
+            <div class="tokenomics-title">Automated Burn Loop</div>
+            <div class="tokenomics-description">
+                <span class="desktop-text">Creator rewards automatically bought back and burned.</span>
+                <span class="mobile-text">Creator rewards auto-burned.</span>
+            </div>
+        </div>
+    </div>
+</section>
         
         <!-- Footer section -->
         <section class="section">
