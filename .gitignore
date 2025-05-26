@@ -4,6 +4,21 @@ node_modules/
 # Environment variables
 .env
 
+# Encrypted environment files - NEVER commit these!
+.env.gpg
+.env.gpg.backup.*
+
+# Environment management scripts (optional - you might want to commit these)
+edit-env.sh
+start-secure.sh
+
+# Temporary environment files (in case cleanup fails)
+.env.tmp
+.env.temp
+
+# GPG backup files
+*.gpg~
+
 # Logs
 logs/
 *.log
@@ -40,4 +55,5 @@ build/
 .tmp/
 temp/
 # Live server data - don't track
+data/
 data/
