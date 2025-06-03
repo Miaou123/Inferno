@@ -33,8 +33,21 @@ class SimpleBurnBot {
         
         // File monitoring
         this.burnsFilePath = path.join(__dirname, '../../data/burns.json');
-        this.lastProcessedBurnId = null;
-        this.loadLastProcessedBurn();
+        
+        // Debug file paths
+        console.log(`📁 Burns file path: ${this.burnsFilePath}`);
+        console.log(`📁 Burns file exists: ${fs.existsSync(this.burnsFilePath)}`);
+        
+        if (fs.existsSync(this.burnsFilePath)) {
+            try {
+                const burns = JSON.parse(fs.readFileSync(this.burnsFilePath, 'utf8'));
+                console.log(`📊 Burns file contains ${burns.length} burns`);
+                const untweetedCount = burns.filter(burn => !burn.tweetPosted).length;
+                console.log(`📊 Untweeted burns: ${untweetedCount}`);
+            } catch (error) {
+                console.log(`❌ Error reading burns file: ${error.message}`);
+            }
+        }
         
         console.log(`🔥 Simple Burn Bot initialized - ${isTestMode ? 'TEST MODE' : 'LIVE MODE'} 🔥`);
         if (isTestMode) {
@@ -71,28 +84,6 @@ class SimpleBurnBot {
         console.log('✅ All required environment variables are present');
     }
 
-    loadLastProcessedBurn() {
-        try {
-            const stateFile = path.join(__dirname, 'last-processed-burn.txt');
-            if (fs.existsSync(stateFile)) {
-                this.lastProcessedBurnId = fs.readFileSync(stateFile, 'utf8').trim();
-                console.log(`📝 Loaded last processed burn ID: ${this.lastProcessedBurnId}`);
-            }
-        } catch (error) {
-            console.log('📝 No previous burn state found, starting fresh');
-        }
-    }
-
-    saveLastProcessedBurn(burnId) {
-        try {
-            const stateFile = path.join(__dirname, 'last-processed-burn.txt');
-            fs.writeFileSync(stateFile, burnId);
-            this.lastProcessedBurnId = burnId;
-        } catch (error) {
-            console.error('Error saving last processed burn:', error);
-        }
-    }
-
     /**
      * Generate a simple burn announcement message
      * @param {string} burnType - 'milestone' or 'buyback'
@@ -111,12 +102,10 @@ class SimpleBurnBot {
             
             return `🔥 MILESTONE BURN! 🔥
 
-${milestoneAmount.toLocaleString()} milestone reached!
+$${milestoneAmount.toLocaleString()} milestone reached!
 💥 ${tokensDestroyed.toLocaleString()} $INFERNO burned (${percentOfSupply}% supply)
 
-${solscanLink}
-
-#INFERNO #TokenBurn`;
+${solscanLink}`;
         } else {
             // Buyback burn
             const solSpent = parseFloat(burnData.solSpent || 0);
@@ -125,12 +114,10 @@ ${solscanLink}
             
             return `🔥 AUTO BURN! 🔥
 
-💰 ${solSpent.toFixed(3)} SOL (${usdValue.toFixed(0)}) → buyback
+💰 ${solSpent.toFixed(3)} SOL → buyback
 💥 ${tokensBurned.toLocaleString()} $INFERNO burned
 
-${solscanLink}
-
-#INFERNO #AutoBurn`;
+${solscanLink}`;
         }
     }
 
@@ -193,44 +180,52 @@ ${solscanLink}
         }
     }
 
-    checkForNewBurns() {
+    /**
+     * Simply get all burns that haven't been tweeted yet
+     * @returns {Array} Burns that need to be tweeted
+     */
+    getUntweetedBurns() {
         try {
+            console.log('\n🔍 === CHECKING FOR UNTWEETED BURNS ===');
+            
             if (!fs.existsSync(this.burnsFilePath)) {
+                console.log('❌ Burns file does not exist:', this.burnsFilePath);
                 return [];
             }
 
+            console.log('✅ Burns file exists, reading...');
             const burns = JSON.parse(fs.readFileSync(this.burnsFilePath, 'utf8'));
             
             if (!Array.isArray(burns) || burns.length === 0) {
+                console.log('❌ No burns found or invalid format');
                 return [];
             }
 
-            // Sort by timestamp to get newest first
-            burns.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-            // Filter out burns that were already tweeted
+            console.log(`📊 Total burns found: ${burns.length}`);
+            
+            // Simply filter for burns that don't have tweetPosted: true
             const untweetedBurns = burns.filter(burn => !burn.tweetPosted);
-
-            // If no last processed burn, take the most recent untweeted one as starting point
-            if (!this.lastProcessedBurnId && untweetedBurns.length > 0) {
-                this.saveLastProcessedBurn(untweetedBurns[0].id);
+            
+            console.log(`🔍 Untweeted burns found: ${untweetedBurns.length}`);
+            
+            // Log each untweeted burn
+            untweetedBurns.forEach((burn, index) => {
+                console.log(`  ${index + 1}. ID: ${burn.id}, Type: ${burn.burnType}, Amount: ${burn.burnAmount}, Timestamp: ${burn.timestamp}`);
+            });
+            
+            if (untweetedBurns.length === 0) {
+                console.log('✅ All burns have been tweeted');
                 return [];
             }
-
-            // Find new burns since last processed that haven't been tweeted
-            const lastProcessedIndex = burns.findIndex(burn => burn.id === this.lastProcessedBurnId);
             
-            if (lastProcessedIndex === -1) {
-                // Last processed burn not found, process the most recent untweeted one
-                return untweetedBurns.length > 0 ? [untweetedBurns[0]] : [];
-            }
-
-            // Return burns that are newer than the last processed one AND haven't been tweeted
-            const newBurns = burns.slice(0, lastProcessedIndex).filter(burn => !burn.tweetPosted);
+            // Sort by timestamp (oldest first) so we tweet in chronological order
+            const sortedBurns = untweetedBurns.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             
-            return newBurns;
+            console.log(`🎯 Returning ${sortedBurns.length} burns to tweet (oldest first)`);
+            return sortedBurns;
+            
         } catch (error) {
-            console.error('Error checking for new burns:', error);
+            console.error('💥 Error checking for untweeted burns:', error);
             return [];
         }
     }
@@ -268,9 +263,9 @@ ${solscanLink}
 
     async processBurn(burn) {
         try {
-            console.log(`\n🔥 Processing new ${burn.burnType} burn: ${burn.id}`);
+            console.log(`\n🔥 Processing ${burn.burnType} burn: ${burn.id}`);
             
-            // Check if this burn was already tweeted
+            // Double-check if this burn was already tweeted (safety check)
             if (burn.tweetPosted) {
                 console.log(`⏭️ Skipping burn ${burn.id} - already tweeted`);
                 return;
@@ -292,9 +287,6 @@ ${solscanLink}
             // Mark this burn as tweeted by updating the burns.json file
             await this.markBurnAsTweeted(burn.id);
             
-            // Save this as the last processed burn
-            this.saveLastProcessedBurn(burn.id);
-            
             console.log(`✅ Processed ${burnType} burn successfully and marked as tweeted`);
         } catch (error) {
             console.error(`Error processing burn ${burn.id}:`, error);
@@ -302,22 +294,51 @@ ${solscanLink}
     }
 
     async startBurnMonitoring() {
-        console.log('👁️ Starting burn file monitoring...');
+        console.log('👁️ Starting burn monitoring...');
         
-        setInterval(async () => {
-            const newBurns = this.checkForNewBurns();
+        // Run an immediate check first
+        console.log('\n⚡ Running immediate burn check on startup...');
+        const untweetedBurns = this.getUntweetedBurns();
+        
+        if (untweetedBurns.length > 0) {
+            console.log(`🔥 Found ${untweetedBurns.length} untweeted burn(s) to process on startup`);
             
-            if (newBurns.length > 0) {
-                console.log(`🔥 Found ${newBurns.length} new burn(s) to process`);
+            // Process burns in chronological order (oldest first)
+            for (const burn of untweetedBurns) {
+                await this.processBurn(burn);
+                // Wait a bit between burns to avoid spam
+                if (untweetedBurns.length > 1) {
+                    console.log('⏳ Waiting 5 seconds before next burn...');
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            }
+        } else {
+            console.log('✅ No untweeted burns found on startup');
+        }
+        
+        // Set up the interval for regular checks
+        let checkCount = 0;
+        setInterval(async () => {
+            checkCount++;
+            const now = new Date().toISOString();
+            console.log(`\n⏰ [${now}] Periodic burn check #${checkCount}`);
+            
+            const newUntweetedBurns = this.getUntweetedBurns();
+            
+            if (newUntweetedBurns.length > 0) {
+                console.log(`🔥 Found ${newUntweetedBurns.length} untweeted burn(s) to process`);
                 
-                // Process burns in chronological order (oldest first)
-                const orderedBurns = newBurns.reverse();
-                
-                for (const burn of orderedBurns) {
+                // Process burns in chronological order
+                for (const burn of newUntweetedBurns) {
                     await this.processBurn(burn);
                     // Wait a bit between burns to avoid spam
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    if (newUntweetedBurns.length > 1) {
+                        console.log('⏳ Waiting 5 seconds before next burn...');
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                    }
                 }
+            } else {
+                console.log(`✅ No untweeted burns found in check #${checkCount}`);
             }
         }, 60000); // Check every minute
     }
@@ -379,6 +400,17 @@ ${solscanLink}
 
     cleanup() {
         console.log('🔥 Simple Burn Bot cleanup completed');
+        
+        // Clean up the old state file if it exists (we don't need it anymore)
+        try {
+            const stateFile = path.join(__dirname, 'last-processed-burn.txt');
+            if (fs.existsSync(stateFile)) {
+                fs.unlinkSync(stateFile);
+                console.log('🗑️ Removed old state file (no longer needed)');
+            }
+        } catch (error) {
+            // Ignore cleanup errors
+        }
     }
 }
 
