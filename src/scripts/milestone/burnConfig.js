@@ -5,8 +5,8 @@
 
 // Milestone burn schedule 
 const BURN_SCHEDULE = [
-  { marketCap: 50000, burnAmount: 25000000, percentOfSupply: 2.50 },
   { marketCap: 100000, burnAmount: 25000000, percentOfSupply: 2.50 },
+  { marketCap: 150000, burnAmount: 25000000, percentOfSupply: 2.50 },
   { marketCap: 200000, burnAmount: 20000000, percentOfSupply: 2.00 },
   { marketCap: 300000, burnAmount: 17500000, percentOfSupply: 1.75 },
   { marketCap: 500000, burnAmount: 17500000, percentOfSupply: 1.75 },

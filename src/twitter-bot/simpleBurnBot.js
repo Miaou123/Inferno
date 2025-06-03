@@ -84,42 +84,57 @@ class SimpleBurnBot {
         console.log('✅ All required environment variables are present');
     }
 
-    /**
-     * Generate a simple burn announcement message
-     * @param {string} burnType - 'milestone' or 'buyback'
-     * @param {object} burnData - Burn transaction data
-     * @returns {string} Tweet message
-     */
-    generateBurnMessage(burnType, burnData) {
-        const txHash = burnData.txSignature;
-        const shortTx = `${txHash.substring(0, 6)}...${txHash.substring(txHash.length - 4)}`;
-        const solscanLink = `https://solscan.io/tx/${txHash}`;
+/**
+ * Generate a simple burn announcement message
+ * @param {string} burnType - 'milestone' or 'buyback'
+ * @param {object} burnData - Burn transaction data
+ * @returns {string} Tweet message
+ */
+generateBurnMessage(burnType, burnData) {
+    const burnTxHash = burnData.txSignature;
+    const burnTxLink = `https://solscan.io/tx/${burnTxHash}`;
+    
+    if (burnType === 'milestone') {
+        const milestoneAmount = burnData.milestone || burnData.marketCapAtBurn || 0;
+        const tokensDestroyed = Math.round(burnData.burnAmount);
+        const percentOfSupply = burnData.details?.percentOfSupply || 0;
         
-        if (burnType === 'milestone') {
-            const milestoneAmount = burnData.milestone || burnData.marketCapAtBurn || 0;
-            const tokensDestroyed = Math.round(burnData.burnAmount);
-            const percentOfSupply = burnData.details?.percentOfSupply || 0;
-            
-            return `🔥 MILESTONE BURN! 🔥
+        return `🔥 MILESTONE BURN! 🔥
 
-$${milestoneAmount.toLocaleString()} milestone reached!
+${milestoneAmount.toLocaleString()} milestone reached!
 💥 ${tokensDestroyed.toLocaleString()} $INFERNO burned (${percentOfSupply}% supply)
 
-${solscanLink}`;
-        } else {
-            // Buyback burn
-            const solSpent = parseFloat(burnData.solSpent || 0);
-            const tokensBurned = Math.round(burnData.burnAmount);
-            const usdValue = parseFloat(burnData.solSpentUsd || 0);
+${burnTxLink}`;
+    } else {
+        // Buyback burn
+        const solSpent = parseFloat(burnData.solSpent || 0);
+        const tokensBurned = Math.round(burnData.burnAmount);
+        const usdValue = parseFloat(burnData.solSpentUsd || 0);
+        
+        // Check if we have buyback transaction hash
+        const buybackTxHash = burnData.buybackTxSignature || burnData.details?.buybackTxSignature;
+        
+        if (buybackTxHash) {
+            const buybackTxLink = `https://solscan.io/tx/${buybackTxHash}`;
             
-            return `🔥 AUTO BURN! 🔥
+            return `BUYBACK AND BURN! 🔥
 
-💰 ${solSpent.toFixed(3)} SOL → buyback
+💰 ${solSpent.toFixed(3)} → buyback
 💥 ${tokensBurned.toLocaleString()} $INFERNO burned
 
-${solscanLink}`;
+🛒 Buyback: ${buybackTxLink}
+🔥 Burn: ${burnTxLink}`;
+        } else {
+            // Fallback if no buyback tx hash
+            return `BUYBACK AND BURN! 🔥
+
+💰 ${solSpent.toFixed(3)} SOL ($${usdValue.toFixed(0)}) → buyback
+💥 ${tokensBurned.toLocaleString()} $INFERNO burned
+
+${burnTxLink}`;
         }
     }
+}
 
     async postTweet(tweetText, tweetType = 'burn') {
         const isTestMode = process.env.TEST_MODE === 'true';

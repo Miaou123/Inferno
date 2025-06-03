@@ -56,20 +56,23 @@ const performBuybackAndBurn = async () => {
       return;
     }
     
-    // Burn tokens
+    // Burn tokens - UPDATED: Pass the buyback transaction signature
     const burnResult = await burnBuybackTokens(
-      createKeypair(),             // Add this keypair parameter
-      buybackResult.tokenAmount,   // Keep this parameter
-      process.env.TOKEN_ADDRESS,   // Add the token address 
-      claimResult.rewardId,        // Keep this parameter
-      buybackResult.solAmount,     // Add SOL amount (optional)
-      claimResult.amountUsd        // Add USD amount (optional)
+      createKeypair(),                    // Keypair parameter
+      buybackResult.tokenAmount,          // Amount of tokens to burn
+      process.env.TOKEN_ADDRESS,          // Token address 
+      claimResult.rewardId,               // Reward ID
+      buybackResult.solAmount,            // SOL amount spent
+      claimResult.amountUsd,              // USD amount
+      buybackResult.txSignature           // ADDED: Buyback transaction signature
     );
     
     if (!burnResult.success) {
       logger.error(`Failed to burn tokens: ${burnResult.error}`);
       return;
     }
+    
+    logger.info(`Complete buyback and burn process successful! Buyback tx: ${buybackResult.txSignature}, Burn tx: ${burnResult.signature}`);
     
   } catch (error) {
     logger.error('Error in buyback and burn process:', error);
