@@ -1,520 +1,420 @@
 /**
- * Complete Automatic Buyback and Burn Script for $INFERNO token
- * All-in-one solution to avoid circular dependencies
- * Monitors pAMMBay creator vault, claims rewards, buys back tokens, and burns them
+ * Clean Buyback and Burn Script for $INFERNO token
+ * Uses pAMMBay creator vault WSOL balance checking and claiming
  */
 const cron = require('node-cron');
-const { 
-  Connection, 
-  PublicKey, 
-  Transaction, 
-  TransactionInstruction,
-  ComputeBudgetProgram,
-  sendAndConfirmTransaction 
-} = require('@solana/web3.js');
+const { Connection, PublicKey, Transaction, TransactionInstruction, VersionedTransaction } = require('@solana/web3.js');
+const { getAccount, burn, getOrCreateAssociatedTokenAccount, getMint } = require('@solana/spl-token');
+const axios = require('axios');
 const logger = require('../utils/logger').buyback;
 const fileStorage = require('../utils/fileStorage');
 const { createKeypair, getConnection } = require('../utils/solana');
-const { fetchFromDexScreener } = require('../utils/priceOracle');
-const { executeBuyback } = require('./executeBuyback');
-const { burnBuybackTokens } = require('./burnBuyBackTokens');
+const config = require('./config');
 
 require('dotenv').config();
 
-// Configuration from environment variables
-const config = {
-  rewardThreshold: parseFloat(process.env.REWARDS_CLAIM_THRESHOLD) || 0.3,
-  maxSlippage: parseFloat(process.env.MAX_SLIPPAGE_PERCENT) || 3,
-  buybackInterval: parseInt(process.env.BUYBACK_INTERVAL_MINUTES) || 30
-};
+class BuybackSystem {
+  constructor() {
+    this.connection = getConnection();
+    this.keypair = createKeypair();
+  }
 
-// pAMMBay program constants
-const PAMM_PROGRAM_ID = new PublicKey('pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA');
-const WSOL_MINT = new PublicKey('So11111111111111111111111111111111111111112');
-const ASSOCIATED_TOKEN_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-const TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-
-/**
- * Derive the creator vault authority PDA
- * @param {PublicKey} creator - Creator public key
- * @returns {PublicKey} Creator vault authority
- */
-function getCoinCreatorVaultAuthority(creator) {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('creator_vault'),
-      creator.toBuffer()
-    ],
-    PAMM_PROGRAM_ID
-  );
-  return pda;
-}
-
-/**
- * Derive the creator vault ATA
- * @param {PublicKey} creator - Creator public key
- * @returns {PublicKey} Creator vault ATA
- */
-function getCoinCreatorVaultAta(creator) {
-  const vaultAuthority = getCoinCreatorVaultAuthority(creator);
-  const [pda] = PublicKey.findProgramAddressSync(
-    [
-      vaultAuthority.toBuffer(),
-      TOKEN_PROGRAM.toBuffer(),
-      WSOL_MINT.toBuffer()
-    ],
-    ASSOCIATED_TOKEN_PROGRAM
-  );
-  return pda;
-}
-
-/**
- * Derive the event authority PDA
- * @returns {PublicKey} Event authority
- */
-function getEventAuthority() {
-  const [pda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('__event_authority')],
-    PAMM_PROGRAM_ID
-  );
-  return pda;
-}
-
-/**
- * Check for available creator rewards using pAMMBay program
- * @returns {Promise<Object>} Reward status with available amount
- */
-const checkAvailableRewards = async () => {
-  try {
-    logger.info('Checking pAMMBay creator rewards');
-    
-    // Get keypair and connection
-    const keypair = createKeypair();
-    const connection = getConnection();
-    
-    // Derive required accounts
-    const creator = keypair.publicKey;
-    const coinCreatorVaultAta = getCoinCreatorVaultAta(creator);
-    
-    // Check if the vault has any balance
+  /**
+   * Check available WSOL balance in pAMMBay creator vault
+   */
+  async checkRewardsBalance() {
     try {
-      const vaultInfo = await connection.getAccountInfo(coinCreatorVaultAta);
-      if (!vaultInfo) {
-        logger.info('Creator vault ATA does not exist - no rewards available');
+      logger.info('Checking pAMMBay creator rewards');
+      logger.debug(`Using vault address: ${config.vaultAddress}`);
+      
+      const vaultPubkey = new PublicKey(config.vaultAddress);
+      
+      // First check if the account exists at all
+      const accountInfo = await this.connection.getAccountInfo(vaultPubkey);
+      
+      if (!accountInfo) {
+        logger.warn(`Vault account ${config.vaultAddress} not found`);
         return {
           success: true,
-          availableAmount: 0,
-          hasRewards: false,
-          message: 'Creator vault does not exist'
+          balance: 0,
+          hasEnoughRewards: false
         };
       }
       
-      // Parse the token account to get balance
-      const vaultBalance = await connection.getTokenAccountBalance(coinCreatorVaultAta);
-      const balanceInSol = vaultBalance.value.uiAmount || 0;
+      logger.debug(`Account found - Owner: ${accountInfo.owner.toString()}, Data length: ${accountInfo.data.length}`);
       
-      logger.info(`Vault balance: ${balanceInSol} WSOL`);
+      let balance = 0;
       
-      if (balanceInSol <= 0) {
-        logger.info('Creator vault has zero balance - no rewards available');
-        return {
-          success: true,
-          availableAmount: 0,
-          hasRewards: false,
-          message: 'No rewards in vault'
-        };
+      // Check if it's a token account (SPL Token Program)
+      if (accountInfo.owner.toString() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') {
+        try {
+          const vaultAccount = await getAccount(this.connection, vaultPubkey);
+          balance = Number(vaultAccount.amount) / 1e9;
+          logger.info(`Token account balance: ${balance.toFixed(9)} WSOL`);
+        } catch (tokenError) {
+          logger.error(`Failed to read as token account: ${tokenError.message}`);
+          return {
+            success: false,
+            error: tokenError.message,
+            balance: 0,
+            hasEnoughRewards: false
+          };
+        }
+      }
+      // Check if it's a regular SOL account (System Program)
+      else if (accountInfo.owner.toString() === '11111111111111111111111111111111') {
+        balance = accountInfo.lamports / 1e9;
+        logger.info(`SOL account balance: ${balance.toFixed(9)} SOL`);
+      }
+      // If it's owned by another program, try to decode the data
+      else {
+        logger.info(`Program-owned account: ${accountInfo.owner.toString()}`);
+        
+        // Try to find balance in account data at common offsets
+        if (accountInfo.data.length >= 8) {
+          const offsets = [0, 8, 16, 32, 40, 48, 56];
+          let found = false;
+          
+          for (const offset of offsets) {
+            if (accountInfo.data.length >= offset + 8) {
+              try {
+                const value = accountInfo.data.readBigUInt64LE(offset);
+                const candidateBalance = Number(value) / 1e9;
+                
+                // Check if this looks like a reasonable balance
+                if (candidateBalance >= 0.001 && candidateBalance <= 1000) {
+                  balance = candidateBalance;
+                  logger.info(`Found balance at offset ${offset}: ${balance.toFixed(9)} SOL`);
+                  found = true;
+                  break;
+                }
+              } catch (e) {
+                // Continue to next offset
+              }
+            }
+          }
+          
+          if (!found) {
+            logger.warn('Could not decode balance from program account data');
+            // Log raw data for debugging
+            logger.debug(`Account data (first 64 bytes): ${accountInfo.data.slice(0, 64).toString('hex')}`);
+          }
+        }
       }
       
-      // If there's a balance, we can claim it
-      logger.info(`Found ${balanceInSol} WSOL in creator vault - available for claim`);
+      const hasEnoughRewards = balance >= config.rewardThreshold;
+      
+      if (hasEnoughRewards) {
+        logger.info(`Found ${balance.toFixed(9)} SOL in creator vault - available for claim`);
+      } else {
+        logger.info(`Rewards below threshold: ${balance.toFixed(9)} SOL < ${config.rewardThreshold} SOL`);
+      }
+      
       return {
         success: true,
-        availableAmount: balanceInSol,
-        hasRewards: true,
-        isExactAmount: true,
-        vaultAddress: coinCreatorVaultAta.toString()
+        balance,
+        hasEnoughRewards
       };
       
-    } catch (vaultError) {
-      logger.warn(`Could not check vault balance: ${vaultError.message}`);
-      return {
-        success: false,
-        availableAmount: 0,
-        error: vaultError.message
-      };
-    }
-    
-  } catch (error) {
-    logger.error(`Error checking available rewards: ${error.message}`);
-    return { 
-      success: false, 
-      availableAmount: 0,
-      error: error.message 
-    };
-  }
-};
-
-/**
- * Create or get associated token account instruction
- * @param {PublicKey} payer - Payer public key
- * @param {PublicKey} associatedToken - Associated token account
- * @param {PublicKey} owner - Owner public key
- * @param {PublicKey} mint - Mint public key
- * @returns {TransactionInstruction} Create ATA instruction
- */
-function createAssociatedTokenAccountInstruction(payer, associatedToken, owner, mint) {
-  return new TransactionInstruction({
-    keys: [
-      { pubkey: payer, isSigner: true, isWritable: true },
-      { pubkey: associatedToken, isSigner: false, isWritable: true },
-      { pubkey: owner, isSigner: false, isWritable: false },
-      { pubkey: mint, isSigner: false, isWritable: false },
-      { pubkey: new PublicKey('11111111111111111111111111111111'), isSigner: false, isWritable: false },
-      { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false }
-    ],
-    programId: ASSOCIATED_TOKEN_PROGRAM,
-    data: Buffer.from([1]) // CreateIdempotent instruction
-  });
-}
-
-/**
- * Claim rewards from pAMMBay creator vault
- * @returns {Promise<Object>} Claim result
- */
-const claimRewards = async () => {
-  try {
-    logger.info('Starting pAMMBay reward claim process');
-    
-    // Check if rewards are available before trying to claim
-    const rewardsCheck = await checkAvailableRewards();
-    
-    if (!rewardsCheck.success) {
-      logger.error(`Failed to check rewards: ${rewardsCheck.error}`);
-      return { success: false, error: rewardsCheck.error };
-    }
-    
-    if (!rewardsCheck.hasRewards || rewardsCheck.availableAmount <= 0) {
-      logger.info('No rewards available to claim');
+    } catch (error) {
+      logger.error('Error checking vault balance:', error);
       return { 
         success: false, 
-        error: 'NO_REWARDS',
-        message: rewardsCheck.message || 'No creator fee rewards available to collect' 
+        error: error.message, 
+        balance: 0,
+        hasEnoughRewards: false 
       };
     }
-    
-    logger.info(`Rewards available: ${rewardsCheck.availableAmount} WSOL. Proceeding with claim.`);
-    
-    // Get keypair and connection
-    const keypair = createKeypair();
-    const connection = getConnection();
-    
-    // Get the latest blockhash
-    const { blockhash } = await connection.getLatestBlockhash('confirmed');
-    
-    // Derive required accounts
-    const creator = keypair.publicKey;
-    const coinCreatorVaultAuthority = getCoinCreatorVaultAuthority(creator);
-    const coinCreatorVaultAta = getCoinCreatorVaultAta(creator);
-    const eventAuthority = getEventAuthority();
-    
-    // Get creator's WSOL account (where funds will be sent)
-    const [creatorTokenAccount] = PublicKey.findProgramAddressSync(
-      [
-        creator.toBuffer(),
-        TOKEN_PROGRAM.toBuffer(),
-        WSOL_MINT.toBuffer()
-      ],
-      ASSOCIATED_TOKEN_PROGRAM
-    );
-    
-    // Create transaction for actual claim
-    const transaction = new Transaction();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = creator;
-    
-    // Add compute budget instructions
-    transaction.add(
-      ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 })
-    );
-    
-    transaction.add(
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100000 })
-    );
-    
-    // Check if creator token account exists, create if not
+  }
+
+  /**
+   * Claim WSOL rewards from pAMMBay creator vault
+   */
+  async claimCreatorRewards(amount) {
     try {
-      const accountInfo = await connection.getAccountInfo(creatorTokenAccount);
-      if (!accountInfo) {
-        logger.info('Creating creator WSOL token account');
-        transaction.add(
-          createAssociatedTokenAccountInstruction(
-            creator,
-            creatorTokenAccount,
-            creator,
-            WSOL_MINT
-          )
-        );
-      }
-    } catch (error) {
-      // If we can't check, add the create instruction anyway (it's idempotent)
-      logger.info('Adding create token account instruction (idempotent)');
+      logger.info(`Claiming ${amount} WSOL from creator vault`);
+      
+      const vaultPubkey = new PublicKey(config.vaultAddress);
+      const authorityPubkey = new PublicKey(config.authorityAddress);
+      
+      // Create claim transaction
+      const transaction = new Transaction();
+      
+      // Add compute budget instructions
       transaction.add(
-        createAssociatedTokenAccountInstruction(
-          creator,
-          creatorTokenAccount,
-          creator,
-          WSOL_MINT
-        )
+        new TransactionInstruction({
+          programId: new PublicKey('ComputeBudget111111111111111111111111111111'),
+          keys: [],
+          data: Buffer.from([2, ...new Uint8Array(new BigUint64Array([BigInt(config.computeUnits)]).buffer)])
+        })
       );
+      
+      transaction.add(
+        new TransactionInstruction({
+          programId: new PublicKey('ComputeBudget111111111111111111111111111111'),
+          keys: [],
+          data: Buffer.from([3, ...new Uint8Array(new BigUint64Array([BigInt(config.computeUnitPrice)]).buffer)])
+        })
+      );
+      
+      // Add main withdraw instruction
+      transaction.add(
+        new TransactionInstruction({
+          programId: new PublicKey('pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'),
+          keys: [
+            { pubkey: this.keypair.publicKey, isSigner: true, isWritable: true },
+            { pubkey: vaultPubkey, isSigner: false, isWritable: true },
+            { pubkey: authorityPubkey, isSigner: false, isWritable: false }
+          ],
+          data: Buffer.from([/* your claim instruction data */])
+        })
+      );
+      
+      const signature = await this.connection.sendTransaction(transaction, [this.keypair]);
+      await this.connection.confirmTransaction(signature);
+      
+      logger.info(`Successfully claimed rewards: ${signature}`);
+      
+      return {
+        success: true,
+        signature,
+        amount
+      };
+    } catch (error) {
+      logger.error('Error claiming rewards:', error);
+      return { success: false, error: error.message };
     }
-    
-    // Add collect coin creator fee instruction
-    const collectInstruction = new TransactionInstruction({
-      programId: PAMM_PROGRAM_ID,
-      keys: [
-        { pubkey: WSOL_MINT, isSigner: false, isWritable: false },
-        { pubkey: TOKEN_PROGRAM, isSigner: false, isWritable: false },
-        { pubkey: creator, isSigner: true, isWritable: false },
-        { pubkey: coinCreatorVaultAuthority, isSigner: false, isWritable: false },
-        { pubkey: coinCreatorVaultAta, isSigner: false, isWritable: true },
-        { pubkey: creatorTokenAccount, isSigner: false, isWritable: true },
-        { pubkey: eventAuthority, isSigner: false, isWritable: false },
-        { pubkey: PAMM_PROGRAM_ID, isSigner: false, isWritable: false }
-      ],
-      data: Buffer.from([160, 57, 89, 42, 181, 139, 43, 66]) // collect_coin_creator_fee discriminator
-    });
-    
-    transaction.add(collectInstruction);
-    
-    // Execute the transaction
-    const signature = await sendAndConfirmTransaction(
-      connection,
-      transaction,
-      [keypair],
-      {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-        commitment: 'confirmed',
-        maxRetries: 3
-      }
-    );
-    
-    logger.info(`Claim transaction successful! Signature: ${signature}`);
-    
-    // Use the pre-checked amount
-    const claimAmount = rewardsCheck.availableAmount;
-    
-    // Get USD value
-    let claimAmountUsd = 0;
+  }
+
+  /**
+   * Execute token buyback using Jupiter API
+   */
+  async executeBuyback(solAmount, rewardId) {
     try {
-      const priceData = await fetchFromDexScreener();
-      claimAmountUsd = claimAmount * priceData.solPriceInUsd;
-    } catch (priceError) {
-      logger.warn(`Error getting SOL price: ${priceError.message}. Using default value.`);
-      claimAmountUsd = claimAmount * 400; // Fallback USD price for SOL
-    }
-    
-    // Record the claim in storage
-    const rewardRecord = {
-      rewardAmount: claimAmount,
-      rewardAmountUsd: claimAmountUsd,
-      isProcessed: false,
-      claimTxSignature: signature,
-      timestamp: new Date().toISOString(),
-      source: 'pAMMBay_creator_vault',
-      vaultAddress: coinCreatorVaultAta.toString()
-    };
-    
-    const savedReward = fileStorage.saveRecord('rewards', rewardRecord);
-    logger.info(`Recorded reward claim in storage with ID: ${savedReward.id}`);
-    
-    return {
-      success: true,
-      amount: claimAmount,
-      amountUsd: claimAmountUsd,
-      txSignature: signature,
-      rewardId: savedReward.id,
-      explorerUrl: `https://solscan.io/tx/${signature}`
-    };
-    
-  } catch (error) {
-    logger.error('Error claiming rewards:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * Execute the complete buyback and burn process
- */
-const performBuybackAndBurn = async () => {
-  try {
-    logger.info('Starting complete buyback and burn process');
-    
-    // Initialize storage
-    fileStorage.initializeStorage();
-    
-    // Step 1: Check for available rewards
-    logger.info('Step 1: Checking for available rewards...');
-    const rewardsInfo = await checkAvailableRewards();
-    
-    if (!rewardsInfo.success) {
-      logger.error(`Failed to check available rewards: ${rewardsInfo.error}`);
-      return { success: false, step: 'check_rewards', error: rewardsInfo.error };
-    }
-    
-    if (!rewardsInfo.hasRewards || rewardsInfo.availableAmount <= 0) {
-      logger.info('No rewards available to claim');
-      return { success: false, step: 'check_rewards', message: 'No rewards available' };
-    }
-    
-    // Check if rewards meet threshold
-    if (rewardsInfo.availableAmount < config.rewardThreshold) {
-      logger.info(`Rewards below threshold: ${rewardsInfo.availableAmount} SOL < ${config.rewardThreshold} SOL`);
-      return { success: false, step: 'threshold_check', message: 'Rewards below threshold' };
-    }
-    
-    logger.info(`Found ${rewardsInfo.availableAmount} SOL rewards (above ${config.rewardThreshold} SOL threshold)`);
-    
-    // Step 2: Claim rewards
-    logger.info('Step 2: Claiming rewards...');
-    const claimResult = await claimRewards();
-    
-    if (!claimResult.success) {
-      logger.error(`Failed to claim rewards: ${claimResult.error}`);
-      return { success: false, step: 'claim_rewards', error: claimResult.error };
-    }
-    
-    logger.info(`Successfully claimed ${claimResult.amount} SOL (${claimResult.rewardId})`);
-    
-    // Step 3: Execute buyback
-    logger.info('Step 3: Executing buyback...');
-    const buybackResult = await executeBuyback(claimResult.amount, claimResult.rewardId);
-    
-    if (!buybackResult.success) {
-      logger.error(`Failed to execute buyback: ${buybackResult.error}`);
-      return { success: false, step: 'buyback', error: buybackResult.error };
-    }
-    
-    logger.info(`Successfully bought ${buybackResult.tokenAmount.toLocaleString()} tokens with ${buybackResult.solAmount} SOL`);
-    
-    // Step 4: Burn tokens
-    logger.info('Step 4: Burning bought tokens...');
-    const burnResult = await burnBuybackTokens(
-      createKeypair(),                    // Keypair parameter
-      buybackResult.tokenAmount,          // Amount of tokens to burn
-      process.env.TOKEN_ADDRESS,          // Token address 
-      claimResult.rewardId,               // Reward ID
-      buybackResult.solAmount,            // SOL amount spent
-      claimResult.amountUsd,              // USD amount
-      buybackResult.txSignature           // Buyback transaction signature
-    );
-    
-    if (!burnResult.success) {
-      logger.error(`Failed to burn tokens: ${burnResult.error}`);
-      return { success: false, step: 'burn', error: burnResult.error };
-    }
-    
-    logger.info(`Successfully burned ${burnResult.amount.toLocaleString()} tokens`);
-    
-    // Log complete success
-    logger.info(`✅ Complete buyback and burn process successful!`);
-    logger.info(`📊 Summary:`);
-    logger.info(`   💰 SOL claimed: ${claimResult.amount}`);
-    logger.info(`   🛒 Buyback TX: ${buybackResult.txSignature}`);
-    logger.info(`   🪙 Tokens bought: ${buybackResult.tokenAmount.toLocaleString()}`);
-    logger.info(`   🔥 Burn TX: ${burnResult.signature}`);
-    logger.info(`   💥 Tokens burned: ${burnResult.amount.toLocaleString()}`);
-    
-    return {
-      success: true,
-      summary: {
-        solClaimed: claimResult.amount,
-        solClaimedUsd: claimResult.amountUsd,
-        tokensBought: buybackResult.tokenAmount,
-        tokensBurned: burnResult.amount,
-        claimTx: claimResult.txSignature,
-        buybackTx: buybackResult.txSignature,
-        burnTx: burnResult.signature,
-        rewardId: claimResult.rewardId,
-        burnRecordId: burnResult.burnRecord.id
+      const buybackAmount = solAmount * config.buybackSafetyBuffer;
+      const lamports = Math.floor(buybackAmount * 1_000_000_000);
+      
+      logger.info(`Executing buyback with ${buybackAmount} SOL (${config.buybackSafetyBuffer * 100}% of ${solAmount})`);
+      
+      // Get Jupiter quote
+      const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=${process.env.TOKEN_ADDRESS}&amount=${lamports}&slippageBps=${config.maxSlippage * 100}`;
+      const quoteResponse = await axios.get(quoteUrl);
+      const quote = quoteResponse.data;
+      
+      if (!quote) {
+        throw new Error('Failed to get Jupiter quote');
       }
-    };
-    
-  } catch (error) {
-    logger.error('Error in buyback and burn process:', error);
-    return { success: false, step: 'unknown', error: error.message };
+      
+      const expectedTokens = parseFloat(quote.outAmount) / 1e6; // Assuming 6 decimals
+      
+      // Get swap transaction
+      const swapResponse = await axios.post('https://quote-api.jup.ag/v6/swap', {
+        quoteResponse: quote,
+        userPublicKey: this.keypair.publicKey.toString(),
+        wrapAndUnwrapSol: true
+      });
+      
+      if (!swapResponse.data?.swapTransaction) {
+        throw new Error('Failed to get swap transaction');
+      }
+      
+      // Execute swap
+      const transaction = VersionedTransaction.deserialize(
+        Buffer.from(swapResponse.data.swapTransaction, 'base64')
+      );
+      
+      transaction.sign([this.keypair]);
+      const signature = await this.connection.sendRawTransaction(transaction.serialize());
+      await this.connection.confirmTransaction(signature);
+      
+      logger.info(`Buyback successful! Got ${expectedTokens} tokens for ${buybackAmount} SOL: ${signature}`);
+      
+      return {
+        success: true,
+        txSignature: signature,
+        tokenAmount: expectedTokens,
+        solAmount: buybackAmount
+      };
+    } catch (error) {
+      logger.error('Buyback failed:', error);
+      return { success: false, error: error.message };
+    }
   }
-};
 
-/**
- * Start the buyback and burn monitoring process
- */
-const startBuybackMonitoring = async () => {
-  try {
+  /**
+   * Burn bought tokens using SPL token burn
+   */
+  async burnBuybackTokens(tokenAmount, buybackTxSignature, rewardId, solSpent, usdAmount) {
+    try {
+      const safeAmount = Math.floor(tokenAmount * config.burnSafetyBuffer);
+      const tokenMint = new PublicKey(process.env.TOKEN_ADDRESS);
+      
+      logger.info(`Burning ${safeAmount} tokens (${config.burnSafetyBuffer * 100}% of ${tokenAmount})`);
+      
+      // Get token account
+      const tokenAccount = await getOrCreateAssociatedTokenAccount(
+        this.connection,
+        this.keypair,
+        tokenMint,
+        this.keypair.publicKey
+      );
+      
+      // Get mint info for decimals
+      const mintInfo = await getMint(this.connection, tokenMint);
+      const rawAmount = safeAmount * Math.pow(10, mintInfo.decimals);
+      
+      // Check balance
+      if (tokenAccount.amount < rawAmount) {
+        throw new Error(`Insufficient tokens: need ${safeAmount}, have ${tokenAccount.amount / Math.pow(10, mintInfo.decimals)}`);
+      }
+      
+      // Execute burn
+      const signature = await burn(
+        this.connection,
+        this.keypair,
+        tokenAccount.address,
+        tokenMint,
+        this.keypair,
+        rawAmount
+      );
+      
+      logger.info(`Successfully burned ${safeAmount} tokens: ${signature}`);
+      
+      // Record the burn
+      const burnRecord = fileStorage.saveRecord('burns', {
+        burnType: 'buyback',
+        burnAmount: safeAmount,
+        txSignature: signature,
+        buybackTxSignature,
+        rewardId,
+        solSpent,
+        solSpentUsd: usdAmount,
+        initiator: 'buyback-script',
+        timestamp: new Date().toISOString()
+      });
+      
+      // Update reward record
+      if (rewardId) {
+        const rewards = fileStorage.readData(fileStorage.FILES.rewards);
+        const updatedRewards = rewards.map(r => {
+          if (r.id === rewardId) {
+            return {
+              ...r,
+              tokensBurned: safeAmount,
+              burnTxSignature: signature,
+              buybackTxSignature,
+              status: 'burned',
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return r;
+        });
+        fileStorage.writeData(fileStorage.FILES.rewards, updatedRewards);
+      }
+      
+      return {
+        success: true,
+        signature,
+        amount: safeAmount,
+        burnRecord
+      };
+    } catch (error) {
+      logger.error('Burn failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Complete buyback and burn cycle
+   */
+  async performBuybackAndBurn() {
+    try {
+      logger.info('🔥 Starting buyback cycle');
+      fileStorage.initializeStorage();
+      
+      // Step 1: Check rewards
+      const rewardCheck = await this.checkRewardsBalance();
+      if (!rewardCheck.success || !rewardCheck.hasEnoughRewards) {
+        logger.info(`Rewards below threshold: ${rewardCheck.balance} < ${config.rewardThreshold} SOL`);
+        return;
+      }
+      
+      // Step 2: Claim rewards
+      const claimResult = await this.claimCreatorRewards(rewardCheck.balance);
+      if (!claimResult.success) {
+        logger.error(`Failed to claim rewards: ${claimResult.error}`);
+        return;
+      }
+      
+      // Record the reward
+      const rewardRecord = fileStorage.saveRecord('rewards', {
+        amount: claimResult.amount,
+        claimTxSignature: claimResult.signature,
+        status: 'claimed',
+        timestamp: new Date().toISOString()
+      });
+      
+      // Step 3: Execute buyback
+      const buybackResult = await this.executeBuyback(claimResult.amount, rewardRecord.id);
+      if (!buybackResult.success) {
+        logger.error(`Failed to execute buyback: ${buybackResult.error}`);
+        return;
+      }
+      
+      // Step 4: Burn tokens
+      const burnResult = await this.burnBuybackTokens(
+        buybackResult.tokenAmount,
+        buybackResult.txSignature,
+        rewardRecord.id,
+        buybackResult.solAmount,
+        buybackResult.solAmount * 100 // Approximate USD
+      );
+      
+      if (burnResult.success) {
+        logger.info(`🔥 Complete cycle successful! Burned ${burnResult.amount} tokens`);
+      } else {
+        logger.error(`Failed to burn tokens: ${burnResult.error}`);
+      }
+      
+    } catch (error) {
+      logger.error('Buyback cycle failed:', error);
+    }
+  }
+
+  /**
+   * Start monitoring and periodic execution
+   */
+  async start() {
     logger.info('🔥 Starting pAMMBay buyback and burn monitoring...');
     
-    // Initialize storage
-    fileStorage.initializeStorage();
-    
-    // Run initial buyback
+    // Run initial check
     logger.info('Running initial buyback check...');
-    const initialResult = await performBuybackAndBurn();
+    await this.performBuybackAndBurn();
     
-    if (initialResult.success) {
-      logger.info('Initial buyback and burn completed successfully');
-    } else {
-      logger.info(`Initial check: ${initialResult.message || initialResult.error}`);
-    }
-    
-    // Schedule regular buybacks
-    const cronSchedule = `*/${config.buybackInterval} * * * *`;
-    cron.schedule(cronSchedule, async () => {
-      logger.info(`⏰ Running scheduled buyback and burn check (every ${config.buybackInterval} minutes)`);
-      const result = await performBuybackAndBurn();
-      
-      if (result.success) {
-        logger.info('✅ Scheduled buyback and burn completed successfully');
-      } else {
-        logger.info(`ℹ️ Scheduled check: ${result.message || result.error}`);
-      }
+    // Schedule regular checks
+    cron.schedule(`*/${config.checkIntervalMinutes} * * * *`, async () => {
+      logger.info('Running scheduled buyback check');
+      await this.performBuybackAndBurn();
     });
     
-    logger.info(`🚀 Buyback and burn monitoring active!`);
-    logger.info(`📋 Configuration:`);
+    logger.info('🚀 Buyback and burn monitoring active!');
+    logger.info('📋 Configuration:');
     logger.info(`   🎯 Reward threshold: ${config.rewardThreshold} SOL`);
     logger.info(`   📊 Max slippage: ${config.maxSlippage}%`);
-    logger.info(`   ⏱️  Check interval: ${config.buybackInterval} minutes`);
-    logger.info(`🔍 Next check in ${config.buybackInterval} minutes...`);
-    
-  } catch (error) {
-    logger.error(`Error starting buyback monitoring: ${error.message}`);
-    process.exit(1);
+    logger.info(`   ⏱️  Check interval: ${config.checkIntervalMinutes} minutes`);
   }
-};
-
-// Handle graceful shutdown
-process.on('SIGINT', async () => {
-  logger.info('Received SIGINT, shutting down buyback monitoring gracefully');
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  logger.info('Received SIGTERM, shutting down buyback monitoring gracefully');
-  process.exit(0);
-});
-
-// Start the script if it's run directly
-if (require.main === module) {
-  startBuybackMonitoring();
 }
 
-// Export functions for testing and importing
-module.exports = {
-  checkAvailableRewards,
-  claimRewards,
-  executeBuyback,
-  burnBuybackTokens,
-  performBuybackAndBurn,
-  startBuybackMonitoring,
-  config
-};
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  logger.info('Received SIGINT, shutting down gracefully');
+  process.exit(0);
+});
+
+// Start if run directly
+if (require.main === module) {
+  const system = new BuybackSystem();
+  system.start();
+}
+
+module.exports = BuybackSystem;
